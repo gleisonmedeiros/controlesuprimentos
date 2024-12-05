@@ -9,6 +9,25 @@
         {% csrf_token %}
 
         <div class="form-group">
+        <label for="form_projeto">Projeto</label>
+        <select name="form_projeto" id="mycombo" class="form-control">
+            <option value="">Selecione um Projeto</option>
+            {% for projeto in form_projeto %}
+                <option value="{{ projeto.id }}">{{ projeto.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+        <div class="text-center mt-3">
+            <input name="save_projeto" type="submit" class="btn btn-primary" value="Selecionar"></input>
+        </div>
+        </form>
+
+    <form method="POST">
+        {% csrf_token %}
+
+
+        <div class="form-group">
             <label for="{{ form.unidade.id_for_label }}">Unidade</label>
             {{ form.unidade }}
         </div>
@@ -50,3 +69,30 @@
         {% endif %}
     {% endfor %}
 {% endblock %}
+
+<script>
+    document.getElementById('mycombo').addEventListener('change', function () {
+        const selectedValue = this.value;
+
+        if (selectedValue) {
+            // Enviar valor selecionado via fetch para a view
+            fetch('/processar-selecao/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'  // Django precisa do token CSRF
+                },
+                body: JSON.stringify({ selected: selectedValue })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Exibir a resposta do servidor
+                document.getElementById('result').innerHTML = `Você selecionou o projeto com ID: ${data.result}`;
+            })
+            .catch(error => console.error('Erro:', error));
+        } else {
+            // Exibir mensagem quando nada for selecionado
+            document.getElementById('result').innerHTML = 'Por favor, selecione um projeto.';
+        }
+    });
+</script>
