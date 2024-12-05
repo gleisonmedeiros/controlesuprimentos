@@ -1,0 +1,32 @@
+
+{% extends 'index.html' %}  <!-- Estende o template base, se houver -->
+
+{% block content %}
+<div class="container">
+    <h4>Criar Projeto</h4>
+    <form method="POST">
+        {% csrf_token %}
+
+        <!-- Exibe o campo 'nome' -->
+        <div class="form-group">
+            <label for="id_nome">Nome da Projeto:</label>
+            {{ form.nome }}
+        </div>
+
+        <!-- Botão de enviar -->
+        <input name="save_projeto" type="submit" class="btn btn-primary" value="Salvar"></input>
+    </form>
+
+    {% for error in errors %}
+        {% if error == '0' %}
+            <div id="mensagem-alerta" class="alert alert-success" role="alert">
+                Projeto salvo com Sucesso
+            </div>
+        {% else %}
+            <div id="mensagem-alerta" class="alert alert-danger" role="alert">
+                {{ error  }}
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}

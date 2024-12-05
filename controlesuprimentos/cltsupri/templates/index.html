@@ -1,0 +1,43 @@
+{% extends 'base.html' %}  <!-- Estende o template base, se houver -->
+
+{% block menu %}
+<!-- Barra de navegação (Navbar) -->
+<nav class="navbar navbar-expand-lg navbar-light" style="background-color: #d6f4ff;">
+  <div class="container">
+    <a class="navbar-brand" href="#">Controle de Suprimentos</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <!-- Alinhar "Início" e "Cadastro" à esquerda -->
+        <li class="nav-item">
+          <a class="nav-link active" href="{% url 'index' %}">Início</a>
+        </li>
+        <!-- Menu Dropdown para Cadastro -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Cadastro
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+              <li><a class="dropdown-item" href="{% url 'criar_projeto' %}">Cadastro de Projeto</a></li>
+            <li><a class="dropdown-item" href="{% url 'criar_unidade' %}">Cadastro de Unidade</a></li>
+            <li><a class="dropdown-item" href="{% url 'criar_suprimento' %}">Cadastro de Suprimento</a></li>
+            <li><a class="dropdown-item" href="{% url 'entrega_suprimento' %}">Entrega</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div style="margin-top: 30px;"></div>
+
+{% block content %}
+{% endblock %}
+
+<!-- Rodapé fixado no final da página -->
+<footer class="bg-dark text-white text-center py-1 fixed-bottom">
+  <p>by Gleison</p>
+</footer>
+{% endblock %}

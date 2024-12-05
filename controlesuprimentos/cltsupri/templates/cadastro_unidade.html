@@ -1,0 +1,38 @@
+
+{% extends 'index.html' %}  <!-- Estende o template base, se houver -->
+
+{% block content %}
+<div class="container">
+    <h2>Criar Unidade</h2>
+    <form method="POST">
+        {% csrf_token %}
+
+        <!-- Exibe o campo 'projeto' -->
+        <div class="form-group">
+            <label for="id_projeto">Projeto:</label>
+            {{ form.projeto }}
+        </div>
+        
+        <!-- Exibe o campo 'nome' -->
+        <div class="form-group">
+            <label for="id_nome">Nome da Unidade:</label>
+            {{ form.nome }}
+        </div>
+        
+        <!-- Botão de enviar -->
+        <input name="save_unidade" type="submit" class="btn btn-primary" value="Salvar"></input>
+    </form>
+
+    {% for error in errors %}
+        {% if error == '0' %}
+            <div id="mensagem-alerta" class="alert alert-success" role="alert">
+                Unidade salva com Sucesso
+            </div>
+        {% else %}
+            <div id="mensagem-alerta" class="alert alert-danger" role="alert">
+                {{ error  }}
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}
