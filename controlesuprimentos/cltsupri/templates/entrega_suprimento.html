@@ -5,6 +5,14 @@
 <div class="container mt-5">
     <h2 class="text-center">Cadastro de Entrega de Suprimento</h2>
 
+    {% for error in errors %}
+        {% if error == '0' %}
+            <div id="mensagem-alerta" class="alert alert-success" role="alert">
+                Unidade salva com Sucesso
+            </div>
+    {% endif %}
+    {% endfor %}
+
     <form method="POST">
         {% csrf_token %}
 
