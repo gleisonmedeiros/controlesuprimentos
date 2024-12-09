@@ -13,7 +13,7 @@
     {% endif %}
     {% endfor %}
 
-    <form method="POST">
+    <form method="POST" >
         {% csrf_token %}
 
         <div class="form-group">
@@ -24,7 +24,7 @@
                 <option value="{{ projeto.id }}">{{ projeto.nome }}</option>
             {% endfor %}
         </select>
-    </div>
+        </div>
 
         <div class="text-center mt-3">
             <input name="save_projeto" type="submit" class="btn btn-primary" value="Selecionar"></input>

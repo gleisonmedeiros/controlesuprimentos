@@ -34,4 +34,4 @@ class EntregaSuprimento(models.Model):
     setor = models.CharField(max_length=100)
 
     def __str__(self):
-        return f"{self.suprimento.nome} para {self.unidade.nome} em {self.data}"
+        return f"{self.unidade.nome} - {self.suprimento.nome} - {self.quantidade_entregue} - {self.data}"

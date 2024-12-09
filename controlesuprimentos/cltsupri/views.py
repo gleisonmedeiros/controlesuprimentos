@@ -10,6 +10,38 @@ def iterando_erro(form):
 
 id = 0
 
+def pesquisa(request):
+    entregas_ordenadas = EntregaSuprimento.objects.all().order_by('data')
+    form_projeto = Projeto.objects.all()
+    form_unidades = Unidade.objects.all()
+    if request.method == 'POST':
+        valor_projeto = request.POST.get('projeto')  # Captura o valor do campo 'projeto'
+        valor_unidade = request.POST.get('unidade')  # Captura o valor do campo 'unidade'
+        data_inicio = request.POST.get('data_inicio')
+        data_fim = request.POST.get('data_fim')
+
+        # Imprimir para teste
+        print(f"Projeto Selecionado: {valor_projeto}")
+        print(f"Unidade Selecionada: {valor_unidade}")
+        print(f"Data Início: {data_inicio}")
+        print(f"Data Fim: {data_fim}")
+
+        # Filtrar entregas com base nos valores capturados
+        if valor_projeto:
+            entregas_ordenadas = entregas_ordenadas.filter(unidade__projeto_id=valor_projeto)
+        if valor_unidade:
+            entregas_ordenadas = entregas_ordenadas.filter(unidade_id=valor_unidade)
+        if data_inicio:
+            entregas_ordenadas = entregas_ordenadas.filter(data__gte=data_inicio)
+        if data_fim:
+            entregas_ordenadas = entregas_ordenadas.filter(data__lte=data_fim)
+    else:
+        for entrega in entregas_ordenadas:
+            #print(entrega)
+            pass
+    return render(request,'pesquisa.html',{'form': entregas_ordenadas,'form_projeto':form_projeto,'form_unidades':form_unidades} )
+
+
 # Create your views here.
 def index(request):
     if request.method == 'POST':
