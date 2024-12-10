@@ -10,5 +10,6 @@ urlpatterns = [
     path('entrega_suprimento/', views.entrega_suprimento, name='entrega_suprimento'),
     path('processar-selecao/', views.processar_selecao, name='processar_selecao'),
     path('pesquisa/', views.pesquisa, name='pesquisa'),
+    path('total_unidade/', views.total_unidade, name='total_unidade'),
 
 ]
