@@ -72,14 +72,16 @@ def total_unidade(request):
             pass
 
     lista = {}
+    total = 0
     for entrega in entregas_ordenadas:
         if entrega.unidade.nome not in lista:
             lista[entrega.unidade.nome] = 0
         lista[entrega.unidade.nome] += entrega.quantidade_entregue
+        total += entrega.quantidade_entregue
 
     print(lista)
 
-    return render(request,'total_unidade.html',{'form': entregas_ordenadas,'form_projeto':form_projeto,'form_unidades':form_unidades,'lista':lista} )
+    return render(request,'total_unidade.html',{'form': entregas_ordenadas,'form_projeto':form_projeto,'form_unidades':form_unidades,'lista':lista,'total':total} )
 
 
 # Create your views here.
