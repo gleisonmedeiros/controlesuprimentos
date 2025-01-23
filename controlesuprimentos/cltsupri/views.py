@@ -119,13 +119,14 @@ def criar_unidade(request):
     return render(request, 'cadastro_unidade.html', {'form': form})
 
 def criar_suprimento(request):
-    global editar, suprimento_id
     if request.method == 'POST':
         form = SuprimentoForm(request.POST)
         if form.is_valid():
             print("funcionou")
             #if 'save_unidade' in request.POST:
             #    print("clicou")
+            editar = request.session.get('editar', None)
+            suprimento_id = request.session.get('suprimento_id_novo', None)
             if (editar == True) and (suprimento_id != None):
                 suprimento = get_object_or_404(Suprimento, id=suprimento_id)
                 form = SuprimentoForm(request.POST, instance=suprimento)
@@ -139,15 +140,16 @@ def criar_suprimento(request):
             return render(request, 'cadastro_suprimento.html', {'form': form,'errors': erro})
     else:
         suprimento_id = request.session.get('suprimento_id', None)
-        editar = False
+        request.session['suprimento_id_novo'] = suprimento_id
+        request.session['editar'] = False
         if suprimento_id != None:
             suprimento = get_object_or_404(Suprimento, id=suprimento_id)
             form = SuprimentoForm(instance=suprimento)
-            editar = True
+            request.session['editar'] = True
         else:
-            editar = False
+            request.session['editar'] = False
             form = SuprimentoForm()
-        print(editar)
+        print(request.session.get('editar', None))
         print(suprimento_id)
         request.session.pop('suprimento_id', None)
 
@@ -188,7 +190,7 @@ def entrega_suprimento(request):
                 print(projeto)
 
                 # Filtra as unidades associadas ao projeto selecionado
-                unidades = Unidade.objects.filter(projeto=projeto)
+                unidades = Unidade.objects.filter(projeto=projeto).order_by('nome')
                 form = EntregaSuprimentoForm(request.POST)
                 form.fields['unidade'].queryset = unidades  # Atualiza o queryset de unidades no formulário
 
@@ -214,6 +216,8 @@ def entrega_suprimento(request):
 
     else:
         form = EntregaSuprimentoForm()  # Se o método não for POST, cria o formulário vazio
+        #del form.fields['unidade']
+        form.fields['unidade'].disabled = True
 
     return render(request, 'entrega_suprimento.html', {'form': form, 'form_projeto': form_projeto})
 

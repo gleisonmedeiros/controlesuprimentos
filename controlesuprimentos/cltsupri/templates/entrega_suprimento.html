@@ -31,38 +31,38 @@
         </div>
         </form>
 
-    <form method="POST">
+    <form method="POST" id="secondForm">
         {% csrf_token %}
 
+            <div class="form-group">
+                <label for="{{ form.unidade.id_for_label }}">Unidade</label>
+                {{ form.unidade }}
+            </div>
 
-        <div class="form-group">
-            <label for="{{ form.unidade.id_for_label }}">Unidade</label>
-            {{ form.unidade }}
-        </div>
+            <div class="form-group">
+                <label for="{{ form.suprimento.id_for_label }}">Suprimento</label>
+                {{ form.suprimento }}
+            </div>
 
-        <div class="form-group">
-            <label for="{{ form.suprimento.id_for_label }}">Suprimento</label>
-            {{ form.suprimento }}
-        </div>
+            <div class="form-group">
+                <label for="{{ form.quantidade_entregue.id_for_label }}">Quantidade Entregue</label>
+                {{ form.quantidade_entregue }}
+            </div>
 
-        <div class="form-group">
-            <label for="{{ form.quantidade_entregue.id_for_label }}">Quantidade Entregue</label>
-            {{ form.quantidade_entregue }}
-        </div>
+            <div class="form-group">
+                <label for="{{ form.data.id_for_label }}">Data</label>
+                {{ form.data }}
+            </div>
 
-        <div class="form-group">
-            <label for="{{ form.data.id_for_label }}">Data</label>
-            {{ form.data }}
-        </div>
+            <div class="form-group">
+                <label for="{{ form.setor.id_for_label }}">Setor</label>
+                {{ form.setor }}
+            </div>
 
-        <div class="form-group">
-            <label for="{{ form.setor.id_for_label }}">Setor</label>
-            {{ form.setor }}
-        </div>
+            <div class="text-center mt-3">
+                <input name="save_entrega" type="submit" class="btn btn-primary" value="Salvar"></input>
+            </div>
 
-        <div class="text-center mt-3">
-            <input name="save_entrega" type="submit" class="btn btn-primary" value="Salvar"></input>
-        </div>
     </form>
 </div>
 {% for error in errors %}
@@ -71,9 +71,9 @@
                 Unidade salva com Sucesso
             </div>
         {% else %}
-            <div id="mensagem-alerta" class="alert alert-danger" role="alert">
-                {{ error  }}
-            </div>
+            <!-- <div id="mensagem-alerta" class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>-->
         {% endif %}
     {% endfor %}
 {% endblock %}
@@ -104,3 +104,4 @@
         }
     });
 </script>
+
