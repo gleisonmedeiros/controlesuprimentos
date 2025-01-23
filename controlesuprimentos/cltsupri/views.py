@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm
 from .models import Projeto, Unidade, Suprimento, EntregaSuprimento
 def iterando_erro(form):
@@ -119,12 +119,16 @@ def criar_unidade(request):
     return render(request, 'cadastro_unidade.html', {'form': form})
 
 def criar_suprimento(request):
+    global editar, suprimento_id
     if request.method == 'POST':
         form = SuprimentoForm(request.POST)
         if form.is_valid():
             print("funcionou")
             #if 'save_unidade' in request.POST:
             #    print("clicou")
+            if (editar == True) and (suprimento_id != None):
+                suprimento = get_object_or_404(Suprimento, id=suprimento_id)
+                form = SuprimentoForm(request.POST, instance=suprimento)
             form.save()  # Salva a nova unidade
             form = SuprimentoForm()
             erro = ['0']
@@ -134,7 +138,18 @@ def criar_suprimento(request):
             print(erro)
             return render(request, 'cadastro_suprimento.html', {'form': form,'errors': erro})
     else:
-        form = SuprimentoForm()
+        suprimento_id = request.session.get('suprimento_id', None)
+        editar = False
+        if suprimento_id != None:
+            suprimento = get_object_or_404(Suprimento, id=suprimento_id)
+            form = SuprimentoForm(instance=suprimento)
+            editar = True
+        else:
+            editar = False
+            form = SuprimentoForm()
+        print(editar)
+        print(suprimento_id)
+        request.session.pop('suprimento_id', None)
 
     return render(request, 'cadastro_suprimento.html', {'form': form})
 
@@ -204,6 +219,8 @@ def entrega_suprimento(request):
 
 
 def processar_selecao(request):
+    pass
+'''
     if request.method == 'POST':
         data = json.loads(request.body)
         selected_value = data.get('selected')
@@ -212,3 +229,18 @@ def processar_selecao(request):
         # Aqui você pode realizar alguma ação com o valor selecionado
         # Exemplo de resposta
         return JsonResponse({'result': selected_value})
+'''
+
+def pesquisa_suprimento(request):
+    form = Suprimento.objects.all()
+    if request.method == 'POST':
+        suprimento_id = request.POST.get("suprimento_id")
+        if suprimento_id:
+            suprimento = Suprimento.objects.get(id=suprimento_id)
+            mensagem = f"Você selecionou o suprimento: {suprimento.nome}"
+            request.session['suprimento_id'] = suprimento_id
+            print(mensagem)
+            #return render(request, 'pesquisa_suprimentos.html', {'form': form})
+            return redirect('criar_suprimento')
+    else:
+        return render(request, 'pesquisa_suprimentos.html',{'form':form})

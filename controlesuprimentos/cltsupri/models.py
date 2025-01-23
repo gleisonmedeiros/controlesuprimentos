@@ -20,7 +20,7 @@ class Unidade(models.Model):
         return self.nome
 
 class Suprimento(models.Model):
-    nome = models.CharField(max_length=100, unique=True)
+    nome = models.CharField(max_length=100)
     quantidade = models.PositiveIntegerField()
 
     def __str__(self):

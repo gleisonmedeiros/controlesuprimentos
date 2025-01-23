@@ -1,0 +1,39 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+<table class="table table-striped table-hover">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">NOME</th>
+      <th scope="col">QUANTIDADE</th>
+    </tr>
+  </thead>
+  <tbody>
+    <form id="suprimento-form" method="post" action=".">
+      {% csrf_token %}
+      {% for suprimento in form %}
+        <tr>
+          <th scope="row">{{ forloop.counter }}</th>
+          <td onclick="submitForm({{ suprimento.id }})" >
+            {{ suprimento.nome }}
+          </td>
+          <td>{{ suprimento.quantidade }}</td>
+        </tr>
+      {% endfor %}
+      <input type="hidden" name="suprimento_id" id="suprimento-id">
+    </form>
+  </tbody>
+</table>
+
+<script>
+  function submitForm(suprimentoId) {
+    // Define o ID do suprimento no campo oculto
+    document.getElementById('suprimento-id').value = suprimentoId;
+    // Envia o formulário automaticamente
+    document.getElementById('suprimento-form').submit();
+  }
+</script>
+
+{% endblock %}
