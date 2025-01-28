@@ -1,0 +1,55 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+<div class="container">
+    <h2>Projeto</h2>
+    <form method="POST">
+        {% csrf_token %}
+
+        <!-- Exibe o campo 'projeto' -->
+        <div class="form-group">
+            <label for="id_projeto">Projeto:</label>
+            {{ form_projeto.projeto }}
+        </div>
+       <!-- Botão de enviar -->
+        <input name="save_unidade" type="submit" class="btn btn-primary" value="Salvar"></input>
+    </form>
+
+</div>
+
+<table class="table table-striped table-hover">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">PROJETO</th>
+      <th scope="col">NOME</th>
+    </tr>
+  </thead>
+  <tbody>
+    <form id="unidade-form" method="post" action=".">
+      {% csrf_token %}
+      {% for unidade in form %}
+        <tr>
+          <th scope="row">{{ forloop.counter }}</th>
+          <td onclick="submitForm({{ unidade.id }})" >
+            {{ unidade.projeto.nome }}
+          </td>
+          <td>{{ unidade.nome }}</td>
+        </tr>
+      {% endfor %}
+      <input type="hidden" name="unidade_id" id="unidade-id">
+    </form>
+  </tbody>
+</table>
+
+<script>
+  function submitForm(unidadeId) {
+    // Define o ID do suprimento no campo oculto
+    document.getElementById('unidade-id').value = unidadeId;
+    // Envia o formulário automaticamente
+    document.getElementById('unidade-form').submit();
+  }
+</script>
+
+{% endblock %}

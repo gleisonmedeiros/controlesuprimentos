@@ -248,3 +248,17 @@ def pesquisa_suprimento(request):
             return redirect('criar_suprimento')
     else:
         return render(request, 'pesquisa_suprimentos.html',{'form':form})
+
+def pesquisa_unidade(request):
+    form_projeto = UnidadeForm()
+    form = Unidade.objects.all()
+    if request.method == 'POST':
+        unidade_id = request.POST.get("unidade_id")
+        if unidade_id:
+            unidade = Unidade.objects.get(id=unidade_id)
+            mensagem = f"Você selecionou a unidade: {unidade.nome}"
+            request.session['unidade_id'] = unidade_id
+            print(mensagem)
+            return redirect('criar_unidade')
+    else:
+        return render(request, 'pesquisa_unidades.html', {'form': form,'form_projeto':form_projeto})
