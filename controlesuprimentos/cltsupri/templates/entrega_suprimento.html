@@ -7,7 +7,7 @@
 <div class="container mt-5">
     <h2 class="text-center">Cadastro de Entrega de Suprimento</h2>
 
-    <form method="POST" >
+    <form method="POST" id="myForm">
         {% csrf_token %}
 
         <div class="form-group">
@@ -21,7 +21,7 @@
         </div>
 
         <div class="text-center mt-3">
-            <input name="save_projeto" type="submit" class="btn btn-primary" value="Selecionar"></input>
+            <input name="save_projeto" type="hidden" value="">
         </div>
         </form>
 
@@ -78,6 +78,19 @@
 
 
     $(document).ready(function() {
+
+       $('#mycombo').on('change', function() {
+    var projetoId = $(this).val();
+
+    if (projetoId) {
+        // Preencher o campo "save_projeto" automaticamente
+        $('input[name="save_projeto"]').val('Selecionar');
+
+        // Submete o formulário automaticamente
+        $('form').submit();
+    }
+});
+
         const table = $('#dataGrid').DataTable({
             "language": {
                 "url": "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"

@@ -188,7 +188,7 @@ def entrega_suprimento(request):
     if request.method == 'POST':
 
         form = EntregaSuprimentoForm(request.POST)
-
+        print(request.POST)
         if 'save_projeto' in request.POST:
             if 'form_projeto' in request.POST and request.POST['form_projeto']:
                 result = request.POST.get('form_projeto')
