@@ -1,6 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+
 from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm
 from .models import Projeto, Unidade, Suprimento, EntregaSuprimento
+import json
+
 def iterando_erro(form):
     errors = []
     for field, error_list in form.errors.items():
@@ -176,13 +180,15 @@ def criar_projeto(request):
     return render(request, 'cadastro_projeto.html', {'form': form})
 
 
-
+@csrf_exempt
 def entrega_suprimento(request):
     form_projeto = Projeto.objects.all()  # Recupera todos os projetos disponíveis
+    suprimentos = Suprimento.objects.all()
 
     if request.method == 'POST':
-        # Captura o projeto selecionado
+
         form = EntregaSuprimentoForm(request.POST)
+
         if 'save_projeto' in request.POST:
             if 'form_projeto' in request.POST and request.POST['form_projeto']:
                 result = request.POST.get('form_projeto')
@@ -198,28 +204,46 @@ def entrega_suprimento(request):
                 # Caso o projeto não tenha sido selecionado, você pode redirecionar ou exibir um erro
                 form = EntregaSuprimentoForm(request.POST)
                 erro = ['Projeto não selecionado']
-                return render(request, 'entrega_suprimento.html', {'form': form, 'errors': erro, 'form_projeto': form_projeto})
+                return render(request, 'entrega_suprimento.html', {'suprimentos':suprimentos,'form': form, 'errors': erro, 'form_projeto': form_projeto})
+        else:
+            data = json.loads(request.body)
+            registros = data.get("registros", [])
+            unidade = data.get('unidade')
+            data = data.get('date')
+
+            for item in registros:
+                toner = item.get("toner")
+                quantidade = item.get("quantidade")
+                setor = item.get("setor")
+                print(f"Toner: {toner}, Quantidade: {quantidade}, Setor: {setor}")
+
+            print(f"Unidade: {unidade}, Data: {data}")
+            # Captura o projeto selecionado
 
         # Se o formulário for válido
         if form.is_valid():
             if 'save_entrega' in request.POST:
                 print("clicou")
+                print(form.cleaned_data['unidade'])
+
+
+
                 form.save()  # Apenas salva os dados do formulário sem associar o projeto
                 erro = ['0']
                 form = EntregaSuprimentoForm()  # Reseta o formulário após o envio
-                return render(request, 'entrega_suprimento.html', {'form': form, 'errors': erro, 'form_projeto': form_projeto})
+                return render(request, 'entrega_suprimento.html', {'suprimentos':suprimentos,'form': form, 'errors': erro, 'form_projeto': form_projeto})
 
         else:
             erro = iterando_erro(form)
             print(erro)
-            return render(request, 'entrega_suprimento.html', {'form': form, 'errors': erro, 'form_projeto': form_projeto})
+            return render(request, 'entrega_suprimento.html', {'suprimentos':suprimentos,'form': form, 'errors': erro, 'form_projeto': form_projeto})
 
     else:
         form = EntregaSuprimentoForm()  # Se o método não for POST, cria o formulário vazio
         #del form.fields['unidade']
         form.fields['unidade'].disabled = True
 
-    return render(request, 'entrega_suprimento.html', {'form': form, 'form_projeto': form_projeto})
+    return render(request, 'entrega_suprimento.html', {'suprimentos':suprimentos,'form': form, 'form_projeto': form_projeto})
 
 
 def processar_selecao(request):

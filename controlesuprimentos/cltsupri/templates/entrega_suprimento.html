@@ -4,83 +4,8 @@
 {% block content %}
 
 
-
-<div class="container mt-5">
-        <h2 class="mb-4 text-center">Cadastro de Usuário</h2>
-        <div class="text-end mb-2">
-            <button id="addRow" class="btn btn-primary">+</button>
-        </div>
-        <div class="table-responsive">
-            <table id="dataGrid" class="table table-striped table-bordered rounded-3 overflow-hidden">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Toner</th>
-                        <th>Quantidade</th>
-                        <th>Setor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><input type="text" class="form-control toner-input" placeholder="Toner" list="tonerList" ></td>
-                        <td><input type="number" class="form-control" placeholder="Quantidade"></td>
-                        <td><input type="text" class="form-control" placeholder="Setor"></td>
-                    </tr>
-                </tbody>
-            </table>
-            <datalist id="tonerList">
-                {% for suprimento in form.fields.suprimento.queryset %}
-                    <option value="{{ suprimento.nome }}">
-                {% endfor %}
-            </datalist>
-
-        </div>
-        <div class="text-center mt-4">
-            <button class="btn btn-success btn-lg">Salvar</button>
-        </div>
-    </div>
-
-<script>
-    $(document).ready(function() {
-        console.log("jQuery carregado!");
-
-        if ($.fn.DataTable) {
-            console.log("DataTables carregado!");
-        } else {
-            console.error("DataTables NÃO foi carregado corretamente!");
-        }
-
-        const table = $('#dataGrid').DataTable({
-            "language": {
-                "url": "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
-            },
-            "info": false,
-            "lengthChange": false,
-            "paging": false,
-            "searching": false
-        });
-
-        $('#addRow').on('click', function() {
-            console.log("Botão clicado!");
-            table.row.add([
-                '<input type="text" class="form-control toner-input" placeholder="Toner" list="tonerList">',
-                '<input type="number" class="form-control" placeholder="Quantidade">',
-                '<input type="text" class="form-control" placeholder="Setor">'
-            ]).draw();
-        });
-    });
-</script>
-
-
 <div class="container mt-5">
     <h2 class="text-center">Cadastro de Entrega de Suprimento</h2>
-
-    {% for error in errors %}
-        {% if error == '0' %}
-            <div id="mensagem-alerta" class="alert alert-success" role="alert">
-                Unidade salva com Sucesso
-            </div>
-    {% endif %}
-    {% endfor %}
 
     <form method="POST" >
         {% csrf_token %}
@@ -100,8 +25,7 @@
         </div>
         </form>
 
-    <form method="POST" id="secondForm">
-        {% csrf_token %}
+
 
             <div class="form-group">
                 <label for="{{ form.unidade.id_for_label }}">Unidade</label>
@@ -109,70 +33,122 @@
             </div>
 
             <div class="form-group">
-                <label for="{{ form.suprimento.id_for_label }}">Suprimento</label>
-                {{ form.suprimento }}
-            </div>
-
-            <div class="form-group">
-                <label for="{{ form.quantidade_entregue.id_for_label }}">Quantidade Entregue</label>
-                {{ form.quantidade_entregue }}
-            </div>
-
-            <div class="form-group">
                 <label for="{{ form.data.id_for_label }}">Data</label>
                 {{ form.data }}
             </div>
 
-            <div class="form-group">
-                <label for="{{ form.setor.id_for_label }}">Setor</label>
-                {{ form.setor }}
-            </div>
 
-            <div class="text-center mt-3">
-                <input name="save_entrega" type="submit" class="btn btn-primary" value="Salvar"></input>
-            </div>
-
-    </form>
 </div>
-{% for error in errors %}
-        {% if error == '0' %}
-            <div id="mensagem-alerta" class="alert alert-success" role="alert">
-                Unidade salva com Sucesso
+
+     <div class="container mt-5">
+
+    <div class="text-end mb-2">
+        <button id="addRow" class="btn btn-primary">+</button>
+    </div>
+    <div class="table-responsive">
+        <table id="dataGrid" class="table table-striped table-bordered rounded-3 overflow-hidden">
+            <thead class="table-dark">
+                <tr>
+                    <th>Toner</th>
+                    <th>Quantidade</th>
+                    <th>Setor</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="text" class="form-control toner-input" placeholder="Toner" list="tonerList"></td>
+                    <td><input type="number" class="form-control" placeholder="Quantidade"></td>
+                    <td><input type="text" class="form-control" placeholder="Setor"></td>
+                </tr>
+            </tbody>
+        </table>
+        <datalist id="tonerList">
+            {{% for suprimento in suprimentos %}
+                <option value="{{ suprimento.nome }}">
+            {% endfor %}
+        </datalist>
+    </div>
+</div>
+
+<div class="text-center mt-3">
+                <input id="saveData" name="save_entrega" type="submit" class="btn btn-primary" value="Salvar"></input>
             </div>
-        {% else %}
-            <!-- <div id="mensagem-alerta" class="alert alert-danger" role="alert">
-                {{ error }}
-            </div>-->
-        {% endif %}
-    {% endfor %}
-{% endblock %}
 
 <script>
-    document.getElementById('mycombo').addEventListener('change', function () {
-        const selectedValue = this.value;
 
-        if (selectedValue) {
-            // Enviar valor selecionado via fetch para a view
-            fetch('/processar-selecao/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'  // Django precisa do token CSRF
+
+    $(document).ready(function() {
+        const table = $('#dataGrid').DataTable({
+            "language": {
+                "url": "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
+            },
+            "info": false,
+            "lengthChange": false,
+            "paging": false,
+            "searching": false
+        });
+
+        $('#addRow').on('click', function() {
+            table.row.add([
+                '<input type="text" class="form-control toner-input" placeholder="Toner" list="tonerList">',
+                '<input type="number" class="form-control" placeholder="Quantidade">',
+                '<input type="text" class="form-control" placeholder="Setor">'
+            ]).draw();
+        });
+
+        $('#saveData').on('click', function(event) {
+            event.preventDefault(); // Impede o envio tradicional do formulário
+
+            let data = [];
+            $('#dataGrid tbody tr').each(function() {
+                let toner = $(this).find("td:eq(0) input").val();
+                let quantidade = $(this).find("td:eq(1) input").val();
+                let setor = $(this).find("td:eq(2) input").val();
+
+                if (toner && quantidade && setor) {
+                    data.push({
+                        toner: toner,
+                        quantidade: quantidade,
+                        setor: setor
+                    });
+                }
+            });
+
+
+
+            let formData = {
+                unidade : $('#id_unidade').val(),
+                date : $('#id_data').val(),
+                registros: data
+            };
+
+            console.log("Enviando dados:", formData);
+
+
+
+            // Enviar via AJAX
+            $.ajax({
+                url: "{% url 'entrega_suprimento' %}",  // Substitua pelo nome correto da sua view
+                method: "POST",
+                data: JSON.stringify(formData),
+                contentType: "application/json",
+                headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                success: function(response) {
+                    alert("Dados enviados com sucesso!");
                 },
-                body: JSON.stringify({ selected: selectedValue })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Exibir a resposta do servidor
-                document.getElementById('result').innerHTML = `Você selecionou o projeto com ID: ${data.result}`;
-            })
-            .catch(error => console.error('Erro:', error));
-        } else {
-            // Exibir mensagem quando nada for selecionado
-            document.getElementById('result').innerHTML = 'Por favor, selecione um projeto.';
-        }
+                error: function(xhr, status, error) {
+                    alert("Erro ao enviar os dados!");
+                    console.error(xhr.responseText);
+                }
+            });
+        });
     });
 </script>
+
+{% endblock %}
+
+
+
 
 
 

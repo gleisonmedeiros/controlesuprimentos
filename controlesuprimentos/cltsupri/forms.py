@@ -30,17 +30,14 @@ class SuprimentoForm(forms.ModelForm):
 class EntregaSuprimentoForm(forms.ModelForm):
     class Meta:
         model = EntregaSuprimento
-        fields = ['unidade', 'suprimento', 'quantidade_entregue', 'data', 'setor']
+        fields = ['unidade','data']
         widgets = {
             'unidade': forms.Select(attrs={'class': 'form-control'}),
-            'suprimento': forms.Select(attrs={'class': 'form-control'}),
-            'quantidade_entregue': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'data': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'setor': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Customiza as opções de unidade e suprimento, se necessário
         self.fields['unidade'].queryset = Unidade.objects.all()
-        self.fields['suprimento'].queryset = Suprimento.objects.all()
+
