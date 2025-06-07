@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm
 from .models import Projeto, Unidade, Suprimento, EntregaSuprimento
 import json
+from datetime import datetime
 
 def iterando_erro(form):
     errors = []
@@ -179,73 +180,158 @@ def criar_projeto(request):
 
     return render(request, 'cadastro_projeto.html', {'form': form})
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import EntregaSuprimento, Suprimento, Unidade, Projeto
+from .forms import EntregaSuprimentoForm
+from datetime import datetime
+import json
+
 
 @csrf_exempt
 def entrega_suprimento(request):
-    form_projeto = Projeto.objects.all()  # Recupera todos os projetos disponíveis
+    form_projeto = Projeto.objects.all()
     suprimentos = Suprimento.objects.all()
+    unidades = Unidade.objects.all()
+    erro = []
 
     if request.method == 'POST':
-
         form = EntregaSuprimentoForm(request.POST)
-        print(request.POST)
+
+        # BLOCO: seleção do projeto
         if 'save_projeto' in request.POST:
-            if 'form_projeto' in request.POST and request.POST['form_projeto']:
-                result = request.POST.get('form_projeto')
-                projeto = Projeto.objects.get(id=result)  # Recupera o projeto selecionado
-                print(projeto)
-
-                # Filtra as unidades associadas ao projeto selecionado
+            projeto_id = request.POST.get('form_projeto')
+            if projeto_id:
+                projeto = Projeto.objects.get(id=projeto_id)
                 unidades = Unidade.objects.filter(projeto=projeto).order_by('nome')
-                form = EntregaSuprimentoForm(request.POST)
-                form.fields['unidade'].queryset = unidades  # Atualiza o queryset de unidades no formulário
-
+                form.fields['unidade'].disabled = False
             else:
-                # Caso o projeto não tenha sido selecionado, você pode redirecionar ou exibir um erro
-                form = EntregaSuprimentoForm(request.POST)
                 erro = ['Projeto não selecionado']
-                return render(request, 'entrega_suprimento.html', {'suprimentos':suprimentos,'form': form, 'errors': erro, 'form_projeto': form_projeto})
-        else:
-            data = json.loads(request.body)
-            registros = data.get("registros", [])
-            unidade = data.get('unidade')
-            data = data.get('date')
 
-            for item in registros:
-                toner = item.get("toner")
-                quantidade = item.get("quantidade")
-                setor = item.get("setor")
-                print(f"Toner: {toner}, Quantidade: {quantidade}, Setor: {setor}")
+            return render(request, 'entrega_suprimento.html', {
+                'suprimentos': suprimentos,
+                'form': form,
+                'form_projeto': form_projeto,
+                'errors': erro,
+                'unidades': unidades,
+            })
 
-            print(f"Unidade: {unidade}, Data: {data}")
-            # Captura o projeto selecionado
+        # BLOCO: envio via AJAX
+        elif request.headers.get('Content-Type') == 'application/json':
+            try:
+                data_json = json.loads(request.body)
+                registros = data_json.get("registros", [])
+                unidade_nome = data_json.get("unidade")
+                data_str = data_json.get("date")
 
-        # Se o formulário for válido
-        if form.is_valid():
-            if 'save_entrega' in request.POST:
-                print("clicou")
-                print(form.cleaned_data['unidade'])
+                erros = []
 
+                # Verifica unidade
+                if not unidade_nome:
+                    erros.append("Unidade não preenchida.")
+                    unidade = None
+                else:
+                    unidade = Unidade.objects.filter(nome__iexact=unidade_nome).first()
+                    if not unidade:
+                        erros.append(f"Unidade '{unidade_nome}' não encontrada.")
+                        unidade = None
 
+                # Verifica data
+                if not data_str:
+                    erros.append("Data não preenchida.")
+                    data = None
+                else:
+                    try:
+                        data = datetime.strptime(data_str, "%Y-%m-%d").date()
+                    except ValueError:
+                        erros.append("Formato de data inválido. Use AAAA-MM-DD.")
+                        data = None
 
-                form.save()  # Apenas salva os dados do formulário sem associar o projeto
+                # Processa os registros
+                entregas_para_salvar = []
+
+                if unidade and data:
+                    for i, item in enumerate(registros or [], start=1):
+                        toner = (item.get("toner") or "").strip()
+                        quantidade = item.get("quantidade")
+                        setor = (item.get("setor") or "").strip()
+
+                        is_empty = not toner and not quantidade and not setor
+                        is_partial = (toner or quantidade or setor) and not (toner and quantidade and setor)
+
+                        if i == 1:
+                            if is_partial or is_empty:
+                                erros.append("Linha 1 deve estar completamente preenchida.")
+                                break  # erro na primeira linha, não continua
+                        else:
+                            if is_partial:
+                                erros.append(f"Linha {i} está parcialmente preenchida.")
+                            elif is_empty:
+                                continue  # ignora linha totalmente vazia
+
+                        if not is_empty and not is_partial:
+                            suprimento = Suprimento.objects.filter(nome__iexact=toner).first()
+                            if not suprimento:
+                                erros.append(f"Linha {i}: Suprimento '{toner}' não encontrado.")
+                            else:
+                                entregas_para_salvar.append(EntregaSuprimento(
+                                    unidade=unidade,
+                                    suprimento=suprimento,
+                                    quantidade_entregue=quantidade,
+                                    data=data,
+                                    setor=setor
+                                ))
+
+                # Salva apenas se não houver erros
+                if not erros:
+                    for entrega in entregas_para_salvar:
+                        entrega.save()
+
+                contexto = {
+                    'form': EntregaSuprimentoForm(),
+                    'form_projeto': form_projeto,
+                    'suprimentos': suprimentos,
+                    'unidades': unidades,
+                }
+
+                if erros:
+                    contexto['erro'] = erros
+                else:
+                    contexto['mensagem'] = ['Entregas salvas com sucesso!']
+
+                return render(request, 'entrega_suprimento.html', contexto)
+
+            except Exception as e:
+                print("Dei erro")
+                return JsonResponse({'erro': str(e)}, status=500)
+
+        # BLOCO: envio tradicional do formulário Django
+        elif 'save_entrega' in request.POST:
+            if form.is_valid():
+                form.save()
                 erro = ['0']
-                form = EntregaSuprimentoForm()  # Reseta o formulário após o envio
-                return render(request, 'entrega_suprimento.html', {'suprimentos':suprimentos,'form': form, 'errors': erro, 'form_projeto': form_projeto})
+                form = EntregaSuprimentoForm()
+            else:
+                erro = iterando_erro(form)
 
-        else:
-            erro = iterando_erro(form)
-            print(erro)
-            return render(request, 'entrega_suprimento.html', {'suprimentos':suprimentos,'form': form, 'errors': erro, 'form_projeto': form_projeto})
+            return render(request, 'entrega_suprimento.html', {
+                'suprimentos': suprimentos,
+                'form': form,
+                'errors': erro,
+                'form_projeto': form_projeto,
+                'unidades': unidades,
+            })
 
     else:
-        form = EntregaSuprimentoForm()  # Se o método não for POST, cria o formulário vazio
-        #del form.fields['unidade']
+        form = EntregaSuprimentoForm()
         form.fields['unidade'].disabled = True
 
-    return render(request, 'entrega_suprimento.html', {'suprimentos':suprimentos,'form': form, 'form_projeto': form_projeto})
-
-
+    return render(request, 'entrega_suprimento.html', {
+        'suprimentos': suprimentos,
+        'form': form,
+        'form_projeto': form_projeto,
+        'unidades': unidades,
+    })
 def processar_selecao(request):
     pass
 '''

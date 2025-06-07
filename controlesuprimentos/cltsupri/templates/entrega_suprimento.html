@@ -6,6 +6,23 @@
 
 <div class="container mt-5">
     <h2 class="text-center">Cadastro de Entrega de Suprimento</h2>
+{% if erro %}
+    <div class="alert alert-danger mt-3">
+        <ul class="mb-0">
+            {% for msg in erro %}
+                <li>{{ msg }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% elif mensagem %}
+    <div class="alert alert-success mt-3">
+        <ul class="mb-0">
+            {% for msg in mensagem %}
+                <li>{{ msg }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
 
     <form method="POST" id="myForm">
         {% csrf_token %}
@@ -27,15 +44,23 @@
 
 
 
-            <div class="form-group">
-                <label for="{{ form.unidade.id_for_label }}">Unidade</label>
-                {{ form.unidade }}
-            </div>
+            <div class="form-row d-flex align-items-end">
+            <div class="form-group col-md-9">  <!-- 75% -->
+    <label for="id_unidade">Unidade</label>
+    <input type="text" name="unidade" id="id_unidade" class="form-control" list="unidadeList" placeholder="Digite ou selecione a unidade">
+    <datalist id="unidadeList">
+        {% for unidade in unidades %}
+            <option value="{{ unidade.nome }}">
+        {% endfor %}
+    </datalist>
+</div>
 
-            <div class="form-group">
+            <div class="form-group col-md-3">  <!-- 25% -->
                 <label for="{{ form.data.id_for_label }}">Data</label>
                 {{ form.data }}
             </div>
+
+</div>
 
 
 </div>
@@ -118,13 +143,13 @@
                 let quantidade = $(this).find("td:eq(1) input").val();
                 let setor = $(this).find("td:eq(2) input").val();
 
-                if (toner && quantidade && setor) {
-                    data.push({
-                        toner: toner,
-                        quantidade: quantidade,
-                        setor: setor
-                    });
-                }
+
+                data.push({
+                    toner: toner,
+                    quantidade: quantidade,
+                    setor: setor
+                });
+
             });
 
 
@@ -139,21 +164,25 @@
 
 
 
-            // Enviar via AJAX
             $.ajax({
-                url: "{% url 'entrega_suprimento' %}",  // Substitua pelo nome correto da sua view
-                method: "POST",
-                data: JSON.stringify(formData),
-                contentType: "application/json",
-                headers: { "X-CSRFToken": "{{ csrf_token }}" },
-                success: function(response) {
-                    alert("Dados enviados com sucesso!");
-                },
-                error: function(xhr, status, error) {
-                    alert("Erro ao enviar os dados!");
-                    console.error(xhr.responseText);
-                }
-            });
+    url: "{% url 'entrega_suprimento' %}",
+    method: "POST",
+    data: JSON.stringify(formData),
+    contentType: "application/json",
+    headers: { "X-CSRFToken": "{{ csrf_token }}" },
+    success: function(responseHtml) {
+        // Substitui o corpo da página pelo HTML renderizado
+        document.open();
+        document.write(responseHtml);
+        document.close();
+    },
+    error: function(xhr) {
+        // Também renderiza erro HTML se vier como resposta
+        document.open();
+        document.write(xhr.responseText);
+        document.close();
+    }
+});
         });
     });
 </script>
