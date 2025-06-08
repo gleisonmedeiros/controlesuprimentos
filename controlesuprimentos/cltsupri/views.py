@@ -85,6 +85,8 @@ def total_unidade(request):
         total += entrega.quantidade_entregue
 
     print(lista)
+    ordenado = {k: lista[k] for k in sorted(lista)}
+    lista = ordenado
 
     return render(request,'total_unidade.html',{'form': entregas_ordenadas,'form_projeto':form_projeto,'form_unidades':form_unidades,'lista':lista,'total':total} )
 
@@ -215,9 +217,9 @@ import json
 
 @csrf_exempt
 def entrega_suprimento(request):
-    form_projeto = Projeto.objects.all()
-    suprimentos = Suprimento.objects.all()
-    unidades = Unidade.objects.all()
+    form_projeto = Projeto.objects.all().order_by('nome')
+    suprimentos = Suprimento.objects.all().order_by('nome')
+    unidades = Unidade.objects.all().order_by('nome')
     erro = []
 
     if request.method == 'POST':
