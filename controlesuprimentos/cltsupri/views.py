@@ -105,21 +105,46 @@ def index(request):
 
 def criar_unidade(request):
     if request.method == 'POST':
-        form = UnidadeForm(request.POST)
+        editar = request.session.get('editar', None)
+        unidade_id = request.session.get('unidade_id_novo', None)
+
+        if editar == True and unidade_id is not None:
+            unidade = get_object_or_404(Unidade, id=unidade_id)
+            form = UnidadeForm(request.POST, instance=unidade)
+        else:
+            form = UnidadeForm(request.POST)
+
         if form.is_valid():
-            print("funcionou")
-            #if 'save_unidade' in request.POST:
-            #    print("clicou")
-            form.save()  # Salva a nova unidade
+            nome = form.cleaned_data.get('nome')
+            projeto = form.cleaned_data.get('projeto')
+
+            # Apaga outra unidade com mesmo nome e projeto, exceto a atual
+            Unidade.objects.filter(nome=nome, projeto=projeto).exclude(id=unidade_id).delete()
+
+            form.save()
             form = UnidadeForm()
             erro = ['0']
-            return render(request, 'cadastro_unidade.html', {'form': form,'errors': erro})
+            return render(request, 'cadastro_unidade.html', {'form': form, 'errors': erro})
         else:
             erro = iterando_erro(form)
             print(erro)
-            return render(request, 'cadastro_unidade.html', {'form': form,'errors': erro})
+            return render(request, 'cadastro_unidade.html', {'form': form, 'errors': erro})
+
     else:
-        form = UnidadeForm()
+        unidade_id = request.session.get('unidade_id', None)
+        request.session['unidade_id_novo'] = unidade_id
+        request.session['editar'] = False
+
+        if unidade_id is not None:
+            unidade = get_object_or_404(Unidade, id=unidade_id)
+            form = UnidadeForm(instance=unidade)
+            request.session['editar'] = True
+        else:
+            form = UnidadeForm()
+
+        print(request.session.get('editar', None))
+        print(unidade_id)
+        request.session.pop('unidade_id', None)
 
     return render(request, 'cadastro_unidade.html', {'form': form})
 
@@ -363,12 +388,13 @@ def pesquisa_unidade(request):
     form_projeto = UnidadeForm()
     form = Unidade.objects.all()
     if request.method == 'POST':
+        if 'save_unidade' in request.POST:
+            projeto_id = request.POST.get("projeto")
+            form = Unidade.objects.filter(projeto_id=projeto_id)
+            return render(request, 'pesquisa_unidades.html', {'form': form, 'form_projeto': form_projeto})
         unidade_id = request.POST.get("unidade_id")
         if unidade_id:
-            unidade = Unidade.objects.get(id=unidade_id)
-            mensagem = f"Você selecionou a unidade: {unidade.nome}"
             request.session['unidade_id'] = unidade_id
-            print(mensagem)
             return redirect('criar_unidade')
     else:
         return render(request, 'pesquisa_unidades.html', {'form': form,'form_projeto':form_projeto})

@@ -1,47 +1,53 @@
-{% extends 'base.html' %}  <!-- Estende o template base, se houver -->
+{% extends 'base.html' %}
 
 {% block menu %}
-<!-- Barra de navegação (Navbar) -->
-<nav class="navbar navbar-expand-lg navbar-light" style="background-color: #d6f4ff;">
+<!-- Navbar moderna -->
+<nav class="navbar navbar-expand-lg navbar-light shadow-sm" style="background-color: #e3f2fd;">
   <div class="container">
-    <a class="navbar-brand" href="#">Controle de Suprimentos</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+    <a class="navbar-brand fw-bold" href="#">Controle de Suprimentos</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
+
     <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav">
-        <!-- Alinhar "Início" e "Cadastro" à esquerda -->
+      <ul class="navbar-nav me-auto">
+        <!-- Início -->
         <li class="nav-item">
-          <a class="nav-link active" href="{% url 'index' %}">Início</a>
+          <a class="nav-link" href="{% url 'index' %}">Início</a>
         </li>
-        <!-- Menu Dropdown para Cadastro -->
+
+        <!-- Cadastro -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
             Cadastro
           </a>
-          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-              <li><a class="dropdown-item" href="{% url 'criar_projeto' %}">Cadastro de Projeto</a></li>
-            <li><a class="dropdown-item" href="{% url 'criar_unidade' %}">Cadastro de Unidade</a></li>
-            <li><a class="dropdown-item" href="{% url 'criar_suprimento' %}">Cadastro de Suprimento</a></li>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'criar_projeto' %}">Projeto</a></li>
+            <li><a class="dropdown-item" href="{% url 'criar_unidade' %}">Unidade</a></li>
+            <li><a class="dropdown-item" href="{% url 'criar_suprimento' %}">Suprimento</a></li>
             <li><a class="dropdown-item" href="{% url 'entrega_suprimento' %}">Entrega</a></li>
           </ul>
         </li>
+
+        <!-- Pesquisa -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
             Pesquisa
           </a>
-          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="{% url 'pesquisa_suprimento' %}">Suprimento</a></li>
             <li><a class="dropdown-item" href="{% url 'pesquisa_unidade' %}">Unidade</a></li>
           </ul>
         </li>
+
+        <!-- Relatórios -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
             Relatório
           </a>
-          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="{% url 'pesquisa' %}">Geral</a></li>
-            <li><a class="dropdown-item" href="{% url 'total_unidade' %}">Total por unidade</a></li>
+            <li><a class="dropdown-item" href="{% url 'total_unidade' %}">Total por Unidade</a></li>
           </ul>
         </li>
       </ul>
@@ -49,15 +55,17 @@
   </div>
 </nav>
 
-<div style="margin-top: 30px;"></div>
+<!-- Espaço entre navbar e conteúdo -->
+<div class="mt-4"></div>
 
 {% block content %}
 {% endblock %}
 
-<div style="margin-top: 50px;"></div>
+<!-- Espaço antes do rodapé -->
+<div class="mb-5"></div>
 
-<!-- Rodapé fixado no final da página -->
-<footer class="bg-dark text-white text-center py-1 fixed-bottom">
-  <p>by Gleison</p>
+<!-- Rodapé bonito e discreto -->
+<footer class="bg-dark text-white text-center py-2 mt-auto fixed-bottom shadow-sm">
+  <small>Desenvolvido por Gleison © {{ now|date:"Y" }}</small>
 </footer>
 {% endblock %}
