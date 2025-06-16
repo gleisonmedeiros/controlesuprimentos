@@ -19,32 +19,45 @@ def pesquisa(request):
     entregas_ordenadas = EntregaSuprimento.objects.all().order_by('data')
     form_projeto = Projeto.objects.all()
     form_unidades = Unidade.objects.all()
+
     if request.method == 'POST':
-        valor_projeto = request.POST.get('projeto')  # Captura o valor do campo 'projeto'
-        valor_unidade = request.POST.get('unidade')  # Captura o valor do campo 'unidade'
-        data_inicio = request.POST.get('data_inicio')
-        data_fim = request.POST.get('data_fim')
+        entrega_id = request.POST.get("entrega_id")
+        is_pesquisa = request.POST.get("btn-pesquisar")  # só vem se o botão de filtro for clicado
 
-        # Imprimir para teste
-        print(f"Projeto Selecionado: {valor_projeto}")
-        print(f"Unidade Selecionada: {valor_unidade}")
-        print(f"Data Início: {data_inicio}")
-        print(f"Data Fim: {data_fim}")
+        if entrega_id and not is_pesquisa:
+            print(f"ID da entrega clicada: {entrega_id}")
+            request.session['entrega_id'] = entrega_id
+            return redirect('pesquisa_entrega')
+            # Aqui você pode redirecionar, mostrar detalhes, etc.
+            # Exemplo: return redirect('detalhes_entrega', pk=entrega_id)
 
-        # Filtrar entregas com base nos valores capturados
-        if valor_projeto:
-            entregas_ordenadas = entregas_ordenadas.filter(unidade__projeto_id=valor_projeto)
-        if valor_unidade:
-            entregas_ordenadas = entregas_ordenadas.filter(unidade_id=valor_unidade)
-        if data_inicio:
-            entregas_ordenadas = entregas_ordenadas.filter(data__gte=data_inicio)
-        if data_fim:
-            entregas_ordenadas = entregas_ordenadas.filter(data__lte=data_fim)
-    else:
-        for entrega in entregas_ordenadas:
-            #print(entrega)
-            pass
-    return render(request,'pesquisa.html',{'form': entregas_ordenadas,'form_projeto':form_projeto,'form_unidades':form_unidades} )
+        else:
+            # Filtros via formulário
+            valor_projeto = request.POST.get('projeto')
+            valor_unidade = request.POST.get('unidade')
+            data_inicio = request.POST.get('data_inicio')
+            data_fim = request.POST.get('data_fim')
+
+            print(f"Projeto Selecionado: {valor_projeto}")
+            print(f"Unidade Selecionada: {valor_unidade}")
+            print(f"Data Início: {data_inicio}")
+            print(f"Data Fim: {data_fim}")
+
+            if valor_projeto:
+                entregas_ordenadas = entregas_ordenadas.filter(unidade__projeto_id=valor_projeto)
+            if valor_unidade:
+                entregas_ordenadas = entregas_ordenadas.filter(unidade_id=valor_unidade)
+            if data_inicio:
+                entregas_ordenadas = entregas_ordenadas.filter(data__gte=data_inicio)
+            if data_fim:
+                entregas_ordenadas = entregas_ordenadas.filter(data__lte=data_fim)
+
+    return render(request, 'pesquisa.html', {
+        'form': entregas_ordenadas,
+        'form_projeto': form_projeto,
+        'form_unidades': form_unidades
+    })
+
 
 def total_unidade(request):
     entregas_ordenadas = EntregaSuprimento.objects.all().order_by('data')
@@ -400,3 +413,47 @@ def pesquisa_unidade(request):
             return redirect('criar_unidade')
     else:
         return render(request, 'pesquisa_unidades.html', {'form': form,'form_projeto':form_projeto})
+
+from datetime import datetime
+from django.shortcuts import render, redirect, get_object_or_404
+
+from django.shortcuts import get_object_or_404, redirect, render
+from datetime import datetime
+
+def pesquisa_entrega(request):
+    entrega_id = request.session.get('entrega_id')
+    if not entrega_id:
+        return redirect('pesquisa')
+
+    entrega = get_object_or_404(EntregaSuprimento, id=entrega_id)
+    unidades = Unidade.objects.all()
+    suprimentos = Suprimento.objects.all()
+
+    if request.method == 'POST':
+        try:
+            entrega.unidade_id = int(request.POST.get('unidade', entrega.unidade_id))
+            entrega.suprimento_id = int(request.POST.get('suprimento', entrega.suprimento_id))
+            entrega.quantidade_entregue = int(request.POST.get('quantidade_entregue', entrega.quantidade_entregue))
+            entrega.data = datetime.strptime(request.POST.get('data', str(entrega.data)), '%Y-%m-%d').date()
+            entrega.setor = request.POST.get('setor', entrega.setor)
+
+            # Se a quantidade for zero, deleta o registro
+            if entrega.quantidade_entregue == 0:
+                entrega.delete()
+            else:
+                entrega.save()
+
+            # Limpa a sessão após salvar ou deletar
+            request.session.pop('entrega_id', None)
+
+            return redirect('pesquisa')
+
+        except Exception as e:
+            print(f"Erro ao salvar ou deletar entrega: {e}")  # Para produção, use logging.error()
+
+    return render(request, 'pesquisa_entrega.html', {
+        'entrega': entrega,
+        'unidades': unidades,
+        'suprimentos': suprimentos,
+    })
+

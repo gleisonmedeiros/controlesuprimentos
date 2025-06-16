@@ -1,0 +1,59 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Editar Entrega</h3>
+
+  <form method="POST">
+    {% csrf_token %}
+
+    <!-- Linha 1: Unidade e Suprimento -->
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="unidade" class="form-label">Unidade</label>
+        <select name="unidade" id="unidade" class="form-control" required>
+          {% for unidade in unidades %}
+            <option value="{{ unidade.id }}" {% if unidade.id == entrega.unidade.id %}selected{% endif %}>
+              {{ unidade.nome }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-6">
+        <label for="suprimento" class="form-label">Suprimento</label>
+        <select name="suprimento" id="suprimento" class="form-control" required>
+          {% for suprimento in suprimentos %}
+            <option value="{{ suprimento.id }}" {% if suprimento.id == entrega.suprimento.id %}selected{% endif %}>
+              {{ suprimento.nome }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Linha 2: Quantidade e Data -->
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="quantidade_entregue" class="form-label">Quantidade Entregue</label>
+        <input type="number" name="quantidade_entregue" id="quantidade_entregue" class="form-control" min="0" value="{{ entrega.quantidade_entregue }}" required>
+      </div>
+
+      <div class="col-md-6">
+        <label for="data" class="form-label">Data</label>
+        <input type="date" class="form-control" id="data" name="data" value="{{ entrega.data|date:'Y-m-d' }}" required>
+      </div>
+    </div>
+
+    <!-- Linha 3: Setor -->
+    <div class="mb-3">
+      <label for="setor" class="form-label">Setor</label>
+      <input type="text" name="setor" id="setor" class="form-control" value="{{ entrega.setor }}" required>
+    </div>
+
+    <!-- Botões -->
+    <button type="submit" class="btn btn-success">Salvar Alterações</button>
+    <a href="{% url 'pesquisa' %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}
