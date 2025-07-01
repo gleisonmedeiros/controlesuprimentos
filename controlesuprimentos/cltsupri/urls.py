@@ -14,5 +14,6 @@ urlpatterns = [
     path('pesquisa_suprimento/', views.pesquisa_suprimento, name='pesquisa_suprimento'),
     path('pesquisa_unidade/', views.pesquisa_unidade, name='pesquisa_unidade'),
     path('pesquisa_entrega/', views.pesquisa_entrega, name='pesquisa_entrega'),
+    path('inventario/', views.inventario, name='inventario'),
 
 ]

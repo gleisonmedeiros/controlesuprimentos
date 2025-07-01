@@ -1,0 +1,31 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label for="arquivo">Enviar dispositivos.json:</label>
+    <input type="file" name="arquivo" accept=".json" required>
+    <button type="submit">Importar</button>
+</form>
+
+{% if mensagem %}
+    <p style="color: green">{{ mensagem }}</p>
+{% endif %}
+
+{% if erro %}
+    <p style="color: red">{{ erro }}</p>
+{% endif %}
+
+{% if lista_off %}
+    <h3>Máquinas OFFLINE ({{ off }}):</h3>
+    <ul>
+        {% for nome in lista_off %}
+            <li>{{ nome }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Máquinas ONLINE: {{ on }}</h3>
+{% endif %}
+
+{% endblock %}

@@ -4,6 +4,10 @@ from django.views.decorators.csrf import csrf_exempt
 from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm
 from .models import Projeto, Unidade, Suprimento, EntregaSuprimento
 import json
+from datetime import datetime, timedelta
+import os
+from django.conf import settings
+from django.shortcuts import get_object_or_404, redirect, render
 from datetime import datetime
 
 def iterando_erro(form):
@@ -417,8 +421,7 @@ def pesquisa_unidade(request):
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 
-from django.shortcuts import get_object_or_404, redirect, render
-from datetime import datetime
+
 
 def pesquisa_entrega(request):
     entrega_id = request.session.get('entrega_id')
@@ -457,3 +460,119 @@ def pesquisa_entrega(request):
         'suprimentos': suprimentos,
     })
 
+#############################################
+
+def esta_off_mais_de_10_dias(timestamp_ms):
+    try:
+        tempo = calcular_tempo_desde_timestamp(timestamp_ms)
+        return tempo["dias"] > 10
+    except Exception:
+        return False
+
+def calcular_tempo_desde_timestamp(timestamp_ms):
+    try:
+        timestamp = int(timestamp_ms) / 1000  # converter de ms para segundos
+        data_conexao = datetime.fromtimestamp(timestamp)
+        agora = datetime.now()
+
+        tempo_passado = agora - data_conexao
+
+        dias = tempo_passado.days
+        horas, resto = divmod(tempo_passado.seconds, 3600)
+        minutos, _ = divmod(resto, 60)
+
+        return {
+            "dias": dias,
+            "horas": horas,
+            "minutos": minutos
+        }
+        return {
+            "dias": 0,
+            "horas": 0,
+            "minutos": 0
+        }
+    except Exception:
+        return {
+            "dias": 0,
+            "horas": 0,
+            "minutos": 0
+        }
+
+def get_safe(d, keys, default=""):
+    try:
+        for key in keys:
+            d = d[key]
+        return d
+    except (KeyError, IndexError, TypeError):
+        return default
+
+def inventario(request):
+    ON = 0
+    OFF = 0
+    lista_nomes_maquinas_offline = []
+
+    if request.method == "POST" and request.FILES.get("arquivo"):
+        arquivo = request.FILES["arquivo"]
+
+        if not arquivo.name.endswith(".json"):
+            return render(request, "inventario.html", {"erro": "Arquivo inválido. Envie um .json."})
+
+        try:
+            data = json.load(arquivo)
+
+            for item in data:
+                nome_maquina = get_safe(item, ["node", "name"])
+                ip_externo = get_safe(item, ["node", "ip"])
+                ip_local = get_safe(item, ["net", "netif2", "Ethernet", -1, "address"])
+                mac_address = get_safe(item, ["net", "netif2", "Ethernet", -1, "mac"])
+                sistema_operacional = get_safe(item, ["node", "osdesc"])
+                processador = get_safe(item, ["sys", "hardware", "windows", "cpu", 0, "Name"])
+                memoria_total = int(get_safe(item, ["sys", "hardware", "windows", "memory", 0, "Capacity"], 0)) / (1024 ** 3)
+                placa_mae = get_safe(item, ["sys", "hardware", "identifiers", "board_name"])
+                fabricante_placa_mae = get_safe(item, ["sys", "hardware", "identifiers", "board_vendor"])
+                disco = get_safe(item, ["sys", "hardware", "windows", "drives", 0, "Model"])
+                tamanho_disco = int(get_safe(item, ["sys", "hardware", "windows", "drives", 0, "Size"], 0)) / (1024 ** 3)
+                timestamp_ms = get_safe(item, ["lastConnect", "time"])
+
+                if esta_off_mais_de_10_dias(timestamp_ms):
+                    status = 'OFF'
+                    OFF += 1
+                    lista_nomes_maquinas_offline.append(nome_maquina)
+                else:
+                    status = 'ON'
+                    ON += 1
+
+                tempo_off = calcular_tempo_desde_timestamp(timestamp_ms)
+                print("=" * 50)
+                print(f"Nome da Máquina: {nome_maquina}")
+                print(f"IP Externo: {ip_externo}")
+                print(f"IP Local: {ip_local}")
+                print(f"MAC Address: {mac_address}")
+                print(f"Sistema Operacional: {sistema_operacional}")
+                print(f"Processador: {processador}")
+                print(f"Memória RAM: {memoria_total:.2f} GB")
+                print(f"Placa-mãe: {placa_mae} ({fabricante_placa_mae})")
+                print(f"Disco: {disco}")
+                print(f"Tamanho do Disco: {tamanho_disco:.2f} GB")
+                print(f"Tempo Off: {tempo_off['dias']}d {tempo_off['horas']}h {tempo_off['minutos']}m ")
+                print(f"Status: {status}")
+                print("=" * 50)
+
+            print(f"Maquinas Online: {ON}")
+            print(f"Maquinas Offline: {OFF}")
+            print("=" * 50)
+            print(lista_nomes_maquinas_offline)
+
+            contexto = {
+                "mensagem": "Arquivo processado com sucesso.",
+                "on": ON,
+                "off": OFF,
+                "lista_off": lista_nomes_maquinas_offline,
+            }
+            return render(request, "inventario.html", contexto)
+
+        except json.JSONDecodeError:
+            return render(request, "inventario.html", {"erro": "Erro ao ler o JSON. Verifique o arquivo."})
+
+    # Garante que GET também retorna algo
+    return render(request, "inventario.html")
