@@ -462,41 +462,11 @@ def pesquisa_entrega(request):
 
 #############################################
 
-def esta_off_mais_de_10_dias(timestamp_ms):
-    try:
-        tempo = calcular_tempo_desde_timestamp(timestamp_ms)
-        return tempo["dias"] > 10
-    except Exception:
-        return False
 
-def calcular_tempo_desde_timestamp(timestamp_ms):
-    try:
-        timestamp = int(timestamp_ms) / 1000  # converter de ms para segundos
-        data_conexao = datetime.fromtimestamp(timestamp)
-        agora = datetime.now()
+import json
+from datetime import datetime, timedelta
+from django.shortcuts import render
 
-        tempo_passado = agora - data_conexao
-
-        dias = tempo_passado.days
-        horas, resto = divmod(tempo_passado.seconds, 3600)
-        minutos, _ = divmod(resto, 60)
-
-        return {
-            "dias": dias,
-            "horas": horas,
-            "minutos": minutos
-        }
-        return {
-            "dias": 0,
-            "horas": 0,
-            "minutos": 0
-        }
-    except Exception:
-        return {
-            "dias": 0,
-            "horas": 0,
-            "minutos": 0
-        }
 
 def get_safe(d, keys, default=""):
     try:
@@ -506,73 +476,126 @@ def get_safe(d, keys, default=""):
     except (KeyError, IndexError, TypeError):
         return default
 
+
+def esta_off_mais_de_10_dias(timestamp_ms):
+    if not timestamp_ms:
+        return True  # Se não tem timestamp, considera offline
+    ultimo_contato = datetime.fromtimestamp(timestamp_ms / 1000)
+    agora = datetime.now()
+    return (agora - ultimo_contato) > timedelta(days=10)
+
+
+def calcular_tempo_desde_timestamp(timestamp_ms):
+    if not timestamp_ms:
+        return {"dias": "-", "horas": "-", "minutos": "-"}
+    ultimo_contato = datetime.fromtimestamp(timestamp_ms / 1000)
+    agora = datetime.now()
+    delta = agora - ultimo_contato
+    dias = delta.days
+    horas = delta.seconds // 3600
+    minutos = (delta.seconds % 3600) // 60
+    return {"dias": dias, "horas": horas, "minutos": minutos}
+
+
 def inventario(request):
     ON = 0
     OFF = 0
     lista_nomes_maquinas_offline = []
+    maquinas = []
 
     if request.method == "POST" and request.FILES.get("arquivo"):
         arquivo = request.FILES["arquivo"]
 
         if not arquivo.name.endswith(".json"):
-            return render(request, "inventario.html", {"erro": "Arquivo inválido. Envie um .json."})
+            return render(request, "inventario.html", {"erro": "Arquivo inválido. Envie um arquivo JSON."})
 
         try:
             data = json.load(arquivo)
 
             for item in data:
+                # Node info
                 nome_maquina = get_safe(item, ["node", "name"])
+                tag = get_safe(item, ["node", "rname"])
                 ip_externo = get_safe(item, ["node", "ip"])
-                ip_local = get_safe(item, ["net", "netif2", "Ethernet", -1, "address"])
-                mac_address = get_safe(item, ["net", "netif2", "Ethernet", -1, "mac"])
+
+                # Rede - pegar IPv4 e MAC da interface Ethernet se existir
+                ethernet_list = get_safe(item, ["net", "netif2", "Ethernet"], [])
+                ip_local = "-"
+                mac_address = "-"
+                for eth in ethernet_list:
+                    if eth.get("family") == "IPv4":
+                        ip_local = eth.get("address", "-")
+                        mac_address = eth.get("mac", "-")
+                        break  # só o primeiro IPv4
+
+                # Sistema Operacional
                 sistema_operacional = get_safe(item, ["node", "osdesc"])
-                processador = get_safe(item, ["sys", "hardware", "windows", "cpu", 0, "Name"])
-                memoria_total = int(get_safe(item, ["sys", "hardware", "windows", "memory", 0, "Capacity"], 0)) / (1024 ** 3)
+
+                # Hardware - processador
+                cpu_list = get_safe(item, ["sys", "hardware", "windows", "cpu"], [])
+                processador = cpu_list[0]["Name"] if cpu_list else "-"
+
+                # Memória RAM total (somar as memórias físicas)
+                memoria_banks = get_safe(item, ["sys", "hardware", "windows", "memory"], [])
+                memoria_total_bytes = 0
+                for mem in memoria_banks:
+                    try:
+                        memoria_total_bytes += int(mem.get("Capacity", 0))
+                    except:
+                        pass
+                memoria_total_gb = memoria_total_bytes / (1024**3) if memoria_total_bytes else "-"
+
+                # Placa-mãe e fabricante
                 placa_mae = get_safe(item, ["sys", "hardware", "identifiers", "board_name"])
                 fabricante_placa_mae = get_safe(item, ["sys", "hardware", "identifiers", "board_vendor"])
-                disco = get_safe(item, ["sys", "hardware", "windows", "drives", 0, "Model"])
-                tamanho_disco = int(get_safe(item, ["sys", "hardware", "windows", "drives", 0, "Size"], 0)) / (1024 ** 3)
-                timestamp_ms = get_safe(item, ["lastConnect", "time"])
 
-                if esta_off_mais_de_10_dias(timestamp_ms):
-                    status = 'OFF'
+                # Disco (pegar modelo e tamanho do primeiro drive)
+                drives = get_safe(item, ["sys", "hardware", "windows", "drives"], [])
+                if drives:
+                    disco = drives[0].get("Model", "-")
+                    tamanho_disco_bytes = int(drives[0].get("Size", 0))
+                    tamanho_disco_gb = round(tamanho_disco_bytes / (1024**3), 2) if tamanho_disco_bytes else "-"
+                else:
+                    disco = "-"
+                    tamanho_disco_gb = "-"
+
+                # Último contato para status e tempo offline
+                timestamp_ms = get_safe(item, ["lastConnect", "time"], None)
+                status = "OFF" if esta_off_mais_de_10_dias(timestamp_ms) else "ON"
+                if status == "OFF":
                     OFF += 1
                     lista_nomes_maquinas_offline.append(nome_maquina)
                 else:
-                    status = 'ON'
                     ON += 1
-
                 tempo_off = calcular_tempo_desde_timestamp(timestamp_ms)
-                print("=" * 50)
-                print(f"Nome da Máquina: {nome_maquina}")
-                print(f"IP Externo: {ip_externo}")
-                print(f"IP Local: {ip_local}")
-                print(f"MAC Address: {mac_address}")
-                print(f"Sistema Operacional: {sistema_operacional}")
-                print(f"Processador: {processador}")
-                print(f"Memória RAM: {memoria_total:.2f} GB")
-                print(f"Placa-mãe: {placa_mae} ({fabricante_placa_mae})")
-                print(f"Disco: {disco}")
-                print(f"Tamanho do Disco: {tamanho_disco:.2f} GB")
-                print(f"Tempo Off: {tempo_off['dias']}d {tempo_off['horas']}h {tempo_off['minutos']}m ")
-                print(f"Status: {status}")
-                print("=" * 50)
 
-            print(f"Maquinas Online: {ON}")
-            print(f"Maquinas Offline: {OFF}")
-            print("=" * 50)
-            print(lista_nomes_maquinas_offline)
+                maquinas.append({
+                    "nome": nome_maquina or "-",
+                    "tag": tag or "-",
+                    "ip_local": ip_local,
+                    # "mac_address": mac_address,  # removido
+                    "sistema_operacional": sistema_operacional or "-",
+                    "processador": processador,
+                    "memoria_total": f"{memoria_total_gb:.2f}" if isinstance(memoria_total_gb,
+                                                                             float) else memoria_total_gb,
+                    "placa_mae": placa_mae,
+                    "fabricante_placa_mae": fabricante_placa_mae,
+                    "disco": disco,
+                    "tamanho_disco": tamanho_disco_gb,
+                    "tempo_off": f"{tempo_off['dias']}d {tempo_off['horas']}h {tempo_off['minutos']}m",
+                    "status": status,
+                })
 
             contexto = {
                 "mensagem": "Arquivo processado com sucesso.",
                 "on": ON,
                 "off": OFF,
                 "lista_off": lista_nomes_maquinas_offline,
+                "maquinas": maquinas,
             }
             return render(request, "inventario.html", contexto)
 
         except json.JSONDecodeError:
             return render(request, "inventario.html", {"erro": "Erro ao ler o JSON. Verifique o arquivo."})
 
-    # Garante que GET também retorna algo
     return render(request, "inventario.html")
