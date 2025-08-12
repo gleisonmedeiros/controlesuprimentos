@@ -1,0 +1,33 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<h2 class="mb-3">Associar Modelo a Fornecedor</h2>
+
+<form method="post" class="mb-4 w-50">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  <div class="mb-3">
+    {{ form.modelo.label_tag }}
+    {{ form.modelo }}
+    {% for error in form.modelo.errors %}
+      <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+  </div>
+
+  <div class="mb-3">
+    {{ form.fornecedor.label_tag }}
+    {{ form.fornecedor }}
+    {% for error in form.fornecedor.errors %}
+      <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+  </div>
+
+  <button type="submit" class="btn btn-primary">Salvar</button>
+</form>
+{% endblock %}

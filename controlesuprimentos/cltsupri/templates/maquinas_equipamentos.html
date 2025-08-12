@@ -1,0 +1,157 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<h2 class="mb-3">Inventário de Máquinas e Equipamentos</h2>
+
+<!-- Filtro -->
+<form method="get" class="mb-4">
+  <div class="row g-3 align-items-end">
+
+    <div class="col-md-3">
+      <label for="unidade" class="form-label">Unidade Associada</label>
+      <select name="unidade" id="unidade" class="form-select form-select-sm">
+        <option value="">Todas</option>
+        {% for u in unidades %}
+          <option value="{{ u.id }}" {% if filtros.unidade_id == u.id|stringformat:"s" %}selected{% endif %}>{{ u.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label for="status" class="form-label">Status Máquina</label>
+      <select name="status" id="status" class="form-select form-select-sm">
+        <option value="">Todos</option>
+        <option value="ON" {% if filtros.status_maquina == "ON" %}selected{% endif %}>ON</option>
+        <option value="OFF" {% if filtros.status_maquina == "OFF" %}selected{% endif %}>OFF</option>
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label for="tipo" class="form-label">Tipo Equipamento</label>
+      <select name="tipo" id="tipo" class="form-select form-select-sm">
+        <option value="">Todos</option>
+        <option value="impressora" {% if filtros.tipo_equipamento == "impressora" %}selected{% endif %}>Impressora</option>
+        <option value="tv" {% if filtros.tipo_equipamento == "tv" %}selected{% endif %}>TV</option>
+        <option value="outro" {% if filtros.tipo_equipamento == "outro" %}selected{% endif %}>Outro</option>
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label for="tempo_off_min" class="form-label">Tempo OFF mínimo (dias)</label>
+      <input type="number" name="tempo_off_min" id="tempo_off_min" min="0" class="form-control form-control-sm"
+             value="{{ filtros.tempo_off_min }}">
+    </div>
+
+    <div class="col-md-3">
+  <label for="fornecedor" class="form-label">Fornecedor Associado</label>
+  <select name="fornecedor" id="fornecedor" class="form-select form-select-sm">
+    <option value="">Todos</option>
+    {% for fornecedor in fornecedores %}
+      <option value="{{ fornecedor }}" {% if filtros.fornecedor_associado == fornecedor %}selected{% endif %}>{{ fornecedor }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+    <div class="col-md-1">
+      <button type="submit" class="btn btn-primary btn-sm w-100">Filtrar</button>
+    </div>
+
+    <div class="col-md-1">
+      <a href="{% url 'maquinas_equipamentos' %}" class="btn btn-secondary btn-sm w-100">Limpar</a>
+    </div>
+
+  </div>
+</form>
+
+<!-- Máquinas -->
+{% if maquinas %}
+  <p><strong>Máquinas Online:</strong> {{ on }} | <strong>Máquinas Offline:</strong> {{ off }}</p>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-hover table-sm small align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Unidade Associada</th>
+          <th>Nome</th>
+          <th>Tag</th>
+          <th>Sistema Operacional</th>
+          <th>Processador</th>
+          <th>Memória RAM (GB)</th>
+          <th>Placa-mãe</th>
+          <th>Fabricante</th>
+          <th>Disco</th>
+          <th>Tamanho Disco (GB)</th>
+          <th>Fornecedor Associado</th>
+          <th>Tempo Offline</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in maquinas %}
+          <tr class="{% if m.status == 'OFF' %}text-danger{% else %}text-success{% endif %}">
+            <td>{{ m.unidade_associada }}</td>
+            <td>{{ m.nome }}</td>
+            <td>{{ m.tag }}</td>
+            <td>{{ m.sistema_operacional }}</td>
+            <td>{{ m.processador }}</td>
+            <td>{{ m.memoria_total }}</td>
+            <td>{{ m.placa_mae }}</td>
+            <td>{{ m.fabricante_placa_mae }}</td>
+            <td>{{ m.disco }}</td>
+            <td>{{ m.tamanho_disco }}</td>
+            <td>{{ m.fornecedor_associado }}</td>
+            <td>{{ m.tempo_off_dias }}d {{ m.tempo_off_horas }}h {{ m.tempo_off_minutos }}m</td>
+            <td><strong>{{ m.status }}</strong></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if lista_off %}
+  <h5>Máquinas Offline:</h5>
+  <ul>
+    {% for nome in lista_off %}
+      <li>{{ nome }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+{% else %}
+  <p>Nenhuma máquina encontrada.</p>
+{% endif %}
+
+<hr>
+
+<!-- Equipamentos -->
+{% if equipamentos %}
+  <div class="table-responsive">
+    <table class="table table-striped table-hover table-sm small align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Unidade</th>
+          <th>Nome</th>
+          <th>Tipo</th>
+          <th>Patrimônio</th>
+          <th>Marca</th>
+          <th>Modelo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in equipamentos %}
+          <tr>
+            <td>{{ e.unidade }}</td>
+            <td>{{ e.get_nome_display }}</td>
+            <td>{{ e.tipo }}</td>
+            <td>{{ e.patrimonio }}</td>
+            <td>{{ e.marca }}</td>
+            <td>{{ e.modelo }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p>Nenhum equipamento encontrado.</p>
+{% endif %}
+
+{% endblock %}
