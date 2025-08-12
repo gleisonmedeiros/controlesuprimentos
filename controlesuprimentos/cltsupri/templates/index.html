@@ -50,9 +50,21 @@
             <li><a class="dropdown-item" href="{% url 'total_unidade' %}">Total por Unidade</a></li>
           </ul>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'inventario' %}">Inventário</a>
+
+        <!-- Inventário -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+            Inventário
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'inventario' %}">Importar</a></li>
+            <li><a class="dropdown-item" href="{% url 'cadastro_equipamento' %}">Cadastro Manual de Equipamentos</a></li>
+            <li><a class="dropdown-item" href="{% url 'associar_unidade' %}">Associar Unidade</a></li>
+            <li><a class="dropdown-item" href="{% url 'modelo-fornecedor-create' %}">Associar Modelo x Fornecedor</a></li>
+            <li><a class="dropdown-item" href="{% url 'maquinas_equipamentos' %}">Relatório Geral</a></li>
+          </ul>
         </li>
+
       </ul>
     </div>
   </div>

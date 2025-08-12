@@ -1,0 +1,42 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Associar Unidade a Prefixo do Nome da Máquina</h2>
+
+    <form method="post" class="mb-4">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ form.prefixo_nome.label_tag }}
+            {{ form.prefixo_nome }}
+        </div>
+        <div class="mb-3">
+            {{ form.unidade.label_tag }}
+            {{ form.unidade }}
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar Associação</button>
+    </form>
+
+    <h4>Associações Existentes</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Prefixo Nome</th>
+                <th>Unidade</th>
+                <th>Projeto</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for assoc in associacoes %}
+            <tr>
+                <td>{{ assoc.prefixo_nome }}</td>
+                <td>{{ assoc.unidade.nome }}</td>
+                <td>{{ assoc.unidade.projeto.nome }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3">Nenhuma associação cadastrada.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

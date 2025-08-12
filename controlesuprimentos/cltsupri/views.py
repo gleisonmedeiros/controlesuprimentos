@@ -1,14 +1,19 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 
-from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm
-from .models import Projeto, Unidade, Suprimento, EntregaSuprimento
+from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm, EquipamentoForm,UnidadeAssociacaoForm,ModeloFornecedorForm
+from .models import Projeto, Unidade, Suprimento, EntregaSuprimento, Equipamento,UnidadeAssociacao, ModeloFornecedor
 import json
 from datetime import datetime, timedelta
 import os
 from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
 from datetime import datetime
+from django.contrib import messages
+from django.shortcuts import redirect
+
+from django.shortcuts import render
+from .models import Maquina, UnidadeAssociacao, ModeloFornecedor
 
 def iterando_erro(form):
     errors = []
@@ -468,33 +473,39 @@ from datetime import datetime, timedelta
 from django.shortcuts import render
 
 
-def get_safe(d, keys, default=""):
-    try:
-        for key in keys:
-            d = d[key]
-        return d
-    except (KeyError, IndexError, TypeError):
-        return default
+import json
+from django.shortcuts import render
+from .models import Maquina
 
+# Suas funções auxiliares (exemplo)
+def get_safe(dct, keys, default=None):
+    for key in keys:
+        if isinstance(dct, dict):
+            dct = dct.get(key, default)
+        else:
+            return default
+    return dct
 
 def esta_off_mais_de_10_dias(timestamp_ms):
-    if not timestamp_ms:
-        return True  # Se não tem timestamp, considera offline
-    ultimo_contato = datetime.fromtimestamp(timestamp_ms / 1000)
-    agora = datetime.now()
-    return (agora - ultimo_contato) > timedelta(days=10)
-
+    # Implemente sua lógica aqui, ex:
+    # Retorna True se timestamp estiver > 10 dias atrás
+    from datetime import datetime, timedelta
+    if timestamp_ms is None:
+        return True
+    ultimo = datetime.fromtimestamp(timestamp_ms / 1000)
+    return (datetime.now() - ultimo) > timedelta(days=10)
 
 def calcular_tempo_desde_timestamp(timestamp_ms):
-    if not timestamp_ms:
-        return {"dias": "-", "horas": "-", "minutos": "-"}
-    ultimo_contato = datetime.fromtimestamp(timestamp_ms / 1000)
-    agora = datetime.now()
-    delta = agora - ultimo_contato
+    from datetime import datetime
+    if timestamp_ms is None:
+        return {'dias': 0, 'horas': 0, 'minutos': 0}
+    ultimo = datetime.fromtimestamp(timestamp_ms / 1000)
+    delta = datetime.now() - ultimo
     dias = delta.days
     horas = delta.seconds // 3600
     minutos = (delta.seconds % 3600) // 60
-    return {"dias": dias, "horas": horas, "minutos": minutos}
+    return {'dias': dias, 'horas': horas, 'minutos': minutos}
+
 
 
 def inventario(request):
@@ -503,99 +514,317 @@ def inventario(request):
     lista_nomes_maquinas_offline = []
     maquinas = []
 
-    if request.method == "POST" and request.FILES.get("arquivo"):
-        arquivo = request.FILES["arquivo"]
+    if request.method == "POST":
+        if request.FILES.get("arquivo"):
+            arquivo = request.FILES["arquivo"]
 
-        if not arquivo.name.endswith(".json"):
-            return render(request, "inventario.html", {"erro": "Arquivo inválido. Envie um arquivo JSON."})
+            if not arquivo.name.endswith(".json"):
+                return render(request, "inventario.html", {"erro": "Arquivo inválido. Envie um arquivo JSON."})
 
-        try:
-            data = json.load(arquivo)
+            try:
+                data = json.load(arquivo)
+                maquinas = []
 
-            for item in data:
-                # Node info
-                nome_maquina = get_safe(item, ["node", "name"])
-                tag = get_safe(item, ["node", "rname"])
-                ip_externo = get_safe(item, ["node", "ip"])
+                for item in data:
+                    nome_maquina = get_safe(item, ["node", "name"]) or "-"
+                    tag = get_safe(item, ["node", "agent", "tag"]) or "-"
+                    sistema_operacional = get_safe(item, ["node", "osdesc"]) or "-"
+                    cpu_list = get_safe(item, ["sys", "hardware", "windows", "cpu"], [])
+                    processador = cpu_list[0]["Name"] if cpu_list else "-"
 
-                # Rede - pegar IPv4 e MAC da interface Ethernet se existir
-                ethernet_list = get_safe(item, ["net", "netif2", "Ethernet"], [])
-                ip_local = "-"
-                mac_address = "-"
-                for eth in ethernet_list:
-                    if eth.get("family") == "IPv4":
-                        ip_local = eth.get("address", "-")
-                        mac_address = eth.get("mac", "-")
-                        break  # só o primeiro IPv4
+                    memoria_banks = get_safe(item, ["sys", "hardware", "windows", "memory"], [])
+                    memoria_total_bytes = 0
+                    for mem in memoria_banks:
+                        try:
+                            memoria_total_bytes += int(mem.get("Capacity", 0))
+                        except:
+                            pass
 
-                # Sistema Operacional
-                sistema_operacional = get_safe(item, ["node", "osdesc"])
+                    if memoria_total_bytes > 0:
+                        memoria_total_gb = memoria_total_bytes / (1024 ** 3)
+                    else:
+                        memoria_total_gb = None
 
-                # Hardware - processador
-                cpu_list = get_safe(item, ["sys", "hardware", "windows", "cpu"], [])
-                processador = cpu_list[0]["Name"] if cpu_list else "-"
+                    placa_mae = get_safe(item, ["sys", "hardware", "identifiers", "board_name"]) or "-"
+                    fabricante_placa_mae = get_safe(item, ["sys", "hardware", "identifiers", "board_vendor"]) or "-"
 
-                # Memória RAM total (somar as memórias físicas)
-                memoria_banks = get_safe(item, ["sys", "hardware", "windows", "memory"], [])
-                memoria_total_bytes = 0
-                for mem in memoria_banks:
-                    try:
-                        memoria_total_bytes += int(mem.get("Capacity", 0))
-                    except:
-                        pass
-                memoria_total_gb = memoria_total_bytes / (1024**3) if memoria_total_bytes else "-"
+                    fornecedor_associado = (
+                        ModeloFornecedor.objects.filter(modelo=placa_mae)
+                        .values_list("fornecedor", flat=True)
+                        .first()
+                        or ""
+                    )
 
-                # Placa-mãe e fabricante
-                placa_mae = get_safe(item, ["sys", "hardware", "identifiers", "board_name"])
-                fabricante_placa_mae = get_safe(item, ["sys", "hardware", "identifiers", "board_vendor"])
+                    drives = get_safe(item, ["sys", "hardware", "windows", "drives"], [])
+                    if drives:
+                        disco = drives[0].get("Model", "-")
+                        tamanho_disco_bytes = int(drives[0].get("Size", 0))
+                        tamanho_disco_gb = round(tamanho_disco_bytes / (1024 ** 3), 2) if tamanho_disco_bytes > 0 else None
+                    else:
+                        disco = "-"
+                        tamanho_disco_gb = None
 
-                # Disco (pegar modelo e tamanho do primeiro drive)
-                drives = get_safe(item, ["sys", "hardware", "windows", "drives"], [])
-                if drives:
-                    disco = drives[0].get("Model", "-")
-                    tamanho_disco_bytes = int(drives[0].get("Size", 0))
-                    tamanho_disco_gb = round(tamanho_disco_bytes / (1024**3), 2) if tamanho_disco_bytes else "-"
-                else:
-                    disco = "-"
-                    tamanho_disco_gb = "-"
+                    timestamp_ms = get_safe(item, ["lastConnect", "time"], None)
+                    status = "OFF" if esta_off_mais_de_10_dias(timestamp_ms) else "ON"
 
-                # Último contato para status e tempo offline
-                timestamp_ms = get_safe(item, ["lastConnect", "time"], None)
-                status = "OFF" if esta_off_mais_de_10_dias(timestamp_ms) else "ON"
-                if status == "OFF":
-                    OFF += 1
-                    lista_nomes_maquinas_offline.append(nome_maquina)
-                else:
-                    ON += 1
-                tempo_off = calcular_tempo_desde_timestamp(timestamp_ms)
+                    if status == "OFF":
+                        OFF += 1
+                        lista_nomes_maquinas_offline.append(nome_maquina)
+                    else:
+                        ON += 1
 
-                maquinas.append({
-                    "nome": nome_maquina or "-",
-                    "tag": tag or "-",
-                    "ip_local": ip_local,
-                    # "mac_address": mac_address,  # removido
-                    "sistema_operacional": sistema_operacional or "-",
-                    "processador": processador,
-                    "memoria_total": f"{memoria_total_gb:.2f}" if isinstance(memoria_total_gb,
-                                                                             float) else memoria_total_gb,
-                    "placa_mae": placa_mae,
-                    "fabricante_placa_mae": fabricante_placa_mae,
-                    "disco": disco,
-                    "tamanho_disco": tamanho_disco_gb,
-                    "tempo_off": f"{tempo_off['dias']}d {tempo_off['horas']}h {tempo_off['minutos']}m",
-                    "status": status,
+                    tempo_off = calcular_tempo_desde_timestamp(timestamp_ms)
+
+                    associacao = None
+                    for i in range(len(nome_maquina), 0, -1):
+                        prefixo = nome_maquina[:i]
+                        associacao = UnidadeAssociacao.objects.filter(prefixo_nome=prefixo).first()
+                        if associacao:
+                            break
+
+                    unidade_associada = associacao.unidade if associacao else None
+
+                    maquinas.append({
+                        "nome": nome_maquina,
+                        "tag": tag,
+                        "sistema_operacional": sistema_operacional,
+                        "processador": processador,
+                        "memoria_total": memoria_total_gb,
+                        "placa_mae": placa_mae,
+                        "fabricante_placa_mae": fabricante_placa_mae,
+                        "disco": disco,
+                        "tamanho_disco": tamanho_disco_gb,
+                        "tempo_off_dias": tempo_off['dias'],
+                        "tempo_off_horas": tempo_off['horas'],
+                        "tempo_off_minutos": tempo_off['minutos'],
+                        "status": status,
+                        "unidade_associada": unidade_associada.nome if unidade_associada else "",
+                        "fornecedor_associado": fornecedor_associado,
+                    })
+
+                return render(request, "inventario.html", {
+                    "mensagem": "Arquivo processado com sucesso. Clique em salvar para persistir no banco.",
+                    "maquinas": maquinas,
+                    "on": ON,
+                    "off": OFF,
+                    "lista_off": lista_nomes_maquinas_offline,
+                    "maquinas_json": json.dumps(maquinas),
                 })
 
-            contexto = {
-                "mensagem": "Arquivo processado com sucesso.",
-                "on": ON,
-                "off": OFF,
-                "lista_off": lista_nomes_maquinas_offline,
-                "maquinas": maquinas,
-            }
-            return render(request, "inventario.html", contexto)
+            except json.JSONDecodeError:
+                return render(request, "inventario.html", {"erro": "Erro ao ler o JSON. Verifique o arquivo."})
 
-        except json.JSONDecodeError:
-            return render(request, "inventario.html", {"erro": "Erro ao ler o JSON. Verifique o arquivo."})
+        elif "salvar" in request.POST:
+            maquinas_json = request.POST.get("maquinas_json")
+            if not maquinas_json:
+                return render(request, "inventario.html", {"erro": "Nenhum dado para salvar."})
 
-    return render(request, "inventario.html")
+            maquinas_para_salvar = json.loads(maquinas_json)
+
+            for m in maquinas_para_salvar:
+                associacao = None
+                for i in range(len(m["nome"]), 0, -1):
+                    prefixo = m["nome"][:i]
+                    associacao = UnidadeAssociacao.objects.filter(prefixo_nome=prefixo).first()
+                    if associacao:
+                        break
+                unidade_associada = associacao.unidade if associacao else None
+
+                Maquina.objects.update_or_create(
+                    nome=m["nome"],
+                    defaults={
+                        "tag": m["tag"],
+                        "sistema_operacional": m["sistema_operacional"],
+                        "processador": m["processador"],
+                        "memoria_total": m["memoria_total"],
+                        "placa_mae": m["placa_mae"],
+                        "fabricante_placa_mae": m["fabricante_placa_mae"],
+                        "disco": m["disco"],
+                        "tamanho_disco": m["tamanho_disco"],
+                        "tempo_off_dias": m["tempo_off_dias"],
+                        "tempo_off_horas": m["tempo_off_horas"],
+                        "tempo_off_minutos": m["tempo_off_minutos"],
+                        "status": m["status"],
+                        "unidade_associada": unidade_associada,
+                        "fornecedor_associado": m.get("fornecedor_associado", ""),
+                    }
+                )
+
+            return render(request, "inventario.html", {
+                "mensagem": "Inventário salvo no banco com sucesso.",
+                "maquinas": maquinas_para_salvar,
+                "on": len([m for m in maquinas_para_salvar if m["status"] == "ON"]),
+                "off": len([m for m in maquinas_para_salvar if m["status"] == "OFF"]),
+                "lista_off": [m["nome"] for m in maquinas_para_salvar if m["status"] == "OFF"],
+                "maquinas_json": maquinas_json,
+            })
+
+    # GET - mostrar dados já salvos
+    maquinas_db = Maquina.objects.all()
+    maquinas = []
+    for m in maquinas_db:
+        maquinas.append({
+            "nome": m.nome,
+            "tag": m.tag,
+            "sistema_operacional": m.sistema_operacional,
+            "processador": m.processador,
+            "memoria_total": m.memoria_total,
+            "placa_mae": m.placa_mae,
+            "fabricante_placa_mae": m.fabricante_placa_mae,
+            "disco": m.disco,
+            "tamanho_disco": m.tamanho_disco,
+            "tempo_off_dias": m.tempo_off_dias,
+            "tempo_off_horas": m.tempo_off_horas,
+            "tempo_off_minutos": m.tempo_off_minutos,
+            "status": m.status,
+            "unidade_associada": m.unidade_associada.nome if m.unidade_associada else "",
+            "fornecedor_associado": m.fornecedor_associado or "",
+        })
+
+    return render(request, "inventario.html", {
+        "maquinas": maquinas,
+        "on": maquinas_db.filter(status="ON").count(),
+        "off": maquinas_db.filter(status="OFF").count(),
+        "lista_off": maquinas_db.filter(status="OFF").values_list("nome", flat=True),
+        "maquinas_json": json.dumps(maquinas),
+    })
+
+def cadastro_equipamento(request):
+    projetos = Projeto.objects.all()
+    tipos = Equipamento.NOME_CHOICES  # seu campo de opções "nome"
+
+    selected_projeto = request.POST.get('projeto', '') if request.method == 'POST' else ''
+    selected_unidade = request.POST.get('unidade', '') if request.method == 'POST' else ''
+
+    if selected_projeto:
+        unidades = Unidade.objects.filter(projeto_id=selected_projeto)
+    else:
+        unidades = Unidade.objects.none()
+
+    if request.method == 'POST' and 'patrimonio' in request.POST:
+        form = EquipamentoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('cadastro_equipamento')
+        else:
+            print("Form inválido. Erros:", form.errors)  # <-- Aqui imprime os erros
+    else:
+        form = EquipamentoForm()
+
+    equipamentos = Equipamento.objects.select_related('unidade').order_by('unidade__nome', 'patrimonio')
+
+    return render(request, 'cadastro_equipamento.html', {
+        'projetos': projetos,
+        'unidades': unidades,
+        'tipos': tipos,
+        'form': form,
+        'selected_projeto': selected_projeto,
+        'selected_unidade': selected_unidade,
+        'equipamentos': equipamentos,
+    })
+
+def associar_unidade(request):
+    if request.method == "POST":
+        form = UnidadeAssociacaoForm(request.POST)
+        if form.is_valid():
+            prefixo = form.cleaned_data['prefixo_nome']
+            unidade = form.cleaned_data['unidade']
+            # Se já existir prefixo, atualiza unidade (sobrescrever)
+            associacao, created = UnidadeAssociacao.objects.update_or_create(
+                prefixo_nome=prefixo,
+                defaults={'unidade': unidade}
+            )
+            return redirect('associar_unidade')
+    else:
+        form = UnidadeAssociacaoForm()
+
+    associacoes = UnidadeAssociacao.objects.select_related('unidade__projeto').all()
+
+    # Para popular combo projeto e unidade, se quiser filtro dinâmico também
+    projetos = Projeto.objects.all()
+
+    context = {
+        'form': form,
+        'associacoes': associacoes,
+        'projetos': projetos,
+    }
+    return render(request, 'associar_unidade.html', context)
+
+
+def modelo_fornecedor_create(request):
+    if request.method == 'POST':
+        form = ModeloFornecedorForm(request.POST)
+        if form.is_valid():
+            modelo = form.cleaned_data['modelo']
+            fornecedor = form.cleaned_data['fornecedor']
+            # Usando o modelo do form.Meta para filtro
+            if ModeloFornecedor.objects.filter(modelo=modelo, fornecedor=fornecedor).exists():
+                form.add_error(None, "Essa associação modelo-fornecedor já existe.")
+            else:
+                form.save()
+                return redirect('modelo-fornecedor-create')
+    else:
+        form = ModeloFornecedorForm()
+
+    return render(request, 'modelo_fornecedor.html', {'form': form})
+
+def maquinas_equipamentos_por_unidade(request):
+    unidades = Unidade.objects.order_by('nome')
+
+    # Filtros via GET
+    unidade_id = request.GET.get('unidade')
+    status_maquina = request.GET.get('status')
+    tipo_equipamento = request.GET.get('tipo')
+    tempo_off_min = request.GET.get('tempo_off_min')
+    fornecedor_associado = request.GET.get('fornecedor')  # novo filtro
+
+    maquinas = Maquina.objects.all()
+    equipamentos = Equipamento.objects.all()
+
+    if unidade_id:
+        maquinas = maquinas.filter(unidade_associada_id=unidade_id)
+        equipamentos = equipamentos.filter(unidade_id=unidade_id)
+
+    if status_maquina:
+        maquinas = maquinas.filter(status=status_maquina)
+
+    if fornecedor_associado:
+        maquinas = maquinas.filter(fornecedor_associado=fornecedor_associado)
+
+    if tipo_equipamento:
+        equipamentos = equipamentos.filter(nome=tipo_equipamento)
+
+    # Filtra por tempo_off_dias >= tempo_off_min (se informado e número válido)
+    if tempo_off_min:
+        try:
+            tempo_off_min_val = int(tempo_off_min)
+            maquinas = maquinas.filter(tempo_off_dias__gte=tempo_off_min_val)
+        except ValueError:
+            pass  # se não for número válido, ignora
+
+    maquinas = maquinas.order_by('unidade_associada__nome', 'nome')
+    equipamentos = equipamentos.order_by('unidade__nome', 'nome')
+
+    # Lista fornecedores distintos para popular o filtro (removendo valores vazios)
+    fornecedores = (
+        Maquina.objects
+        .values_list('fornecedor_associado', flat=True)
+        .exclude(fornecedor_associado__isnull=True)
+        .exclude(fornecedor_associado__exact='')
+        .distinct()
+        .order_by('fornecedor_associado')
+    )
+
+    return render(request, 'maquinas_equipamentos.html', {
+        'unidades': unidades,
+        'fornecedores': fornecedores,
+        'maquinas': maquinas,
+        'equipamentos': equipamentos,
+        'filtros': {
+            'unidade_id': unidade_id or '',
+            'status_maquina': status_maquina or '',
+            'tipo_equipamento': tipo_equipamento or '',
+            'tempo_off_min': tempo_off_min or '',
+            'fornecedor_associado': fornecedor_associado or '',
+        }
+    })
