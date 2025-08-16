@@ -50,9 +50,10 @@ class Equipamento(models.Model):
     )
     nome = models.CharField(max_length=50, choices=NOME_CHOICES, default='impressora')
     tipo = models.CharField(max_length=100, blank=True)  # campo editável, opcional
-    patrimonio = models.CharField(max_length=50, unique=True)
+    patrimonio = models.CharField(max_length=50)
     marca = models.CharField(max_length=100)
     modelo = models.CharField(max_length=100)
+    setor = models.CharField(max_length=100,blank=True)
 
     def __str__(self):
         tipo_exibido = self.tipo if self.tipo else self.get_nome_display()

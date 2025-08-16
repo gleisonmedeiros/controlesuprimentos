@@ -40,7 +40,7 @@ class UnidadeAssociacaoForm(forms.ModelForm):
 class EquipamentoForm(forms.ModelForm):
     class Meta:
         model = Equipamento
-        fields = ['unidade', 'nome', 'patrimonio', 'marca', 'modelo', 'tipo']
+        fields = ['unidade', 'setor','nome', 'patrimonio', 'marca', 'modelo', 'tipo']
 
 class ProjetoForm(forms.ModelForm):
     class Meta:

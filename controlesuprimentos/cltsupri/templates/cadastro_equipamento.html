@@ -1,14 +1,14 @@
 {% extends 'index.html' %}
 
 {% block content %}
-<h4>Cadastro de Equipamento</h4>
+<h5>{% if equipamento_id %}Editar Equipamento{% else %}Cadastro de Equipamento{% endif %}</h5>
 
 <form method="POST" id="form-cadastro-equipamento" class="mb-4">
   {% csrf_token %}
 
   <div class="row">
     <!-- Projeto -->
-    <div class="col-md-6 mb-3">
+    <div class="col-md-4 mb-3">
       <label for="id_projeto">Projeto</label>
       <select name="projeto" id="id_projeto" class="form-control">
         <option value="">Selecione um Projeto</option>
@@ -19,7 +19,7 @@
     </div>
 
     <!-- Unidade -->
-    <div class="col-md-6 mb-3">
+    <div class="col-md-4 mb-3">
       <label for="id_unidade">Unidade</label>
       <select name="unidade" id="id_unidade" class="form-control">
         <option value="">Selecione uma Unidade</option>
@@ -28,31 +28,37 @@
         {% endfor %}
       </select>
     </div>
+
+    <!-- Setor (CharField) -->
+    <div class="col-md-4 mb-3">
+      <label for="id_setor">Setor</label>
+      <input type="text" name="setor" id="id_setor" class="form-control" value="{{ form.setor.value|default_if_none:'' }}">
+    </div>
   </div>
 
   <div class="row">
     <!-- Patrimônio -->
-    <div class="col-md-6 mb-3">
+    <div class="col-md-4 mb-3">
       <label for="id_patrimonio">Patrimônio</label>
       <input type="text" name="patrimonio" id="id_patrimonio" class="form-control" value="{{ form.patrimonio.value|default_if_none:'' }}">
     </div>
 
     <!-- Marca -->
-    <div class="col-md-6 mb-3">
+    <div class="col-md-4 mb-3">
       <label for="id_marca">Marca</label>
       <input type="text" name="marca" id="id_marca" class="form-control" value="{{ form.marca.value|default_if_none:'' }}">
+    </div>
+
+    <!-- Modelo -->
+    <div class="col-md-4 mb-3">
+      <label for="id_modelo">Modelo</label>
+      <input type="text" name="modelo" id="id_modelo" class="form-control" value="{{ form.modelo.value|default_if_none:'' }}">
     </div>
   </div>
 
   <div class="row">
-    <!-- Modelo -->
-    <div class="col-md-6 mb-3">
-      <label for="id_modelo">Modelo</label>
-      <input type="text" name="modelo" id="id_modelo" class="form-control" value="{{ form.modelo.value|default_if_none:'' }}">
-    </div>
-
     <!-- Nome -->
-    <div class="col-md-6 mb-3">
+    <div class="col-md-4 mb-3">
       <label for="id_nome">Nome</label>
       <select name="nome" id="id_nome" class="form-control">
         <option value="">Selecione o Nome</option>
@@ -61,32 +67,39 @@
         {% endfor %}
       </select>
     </div>
-  </div>
 
-  <div class="row">
     <!-- Tipo (opcional) -->
-    <div class="col-md-6 mb-3">
+    <div class="col-md-4 mb-3">
       <label for="id_tipo">Tipo (opcional)</label>
       <input type="text" name="tipo" id="id_tipo" class="form-control" value="{{ form.tipo.value|default_if_none:'' }}">
     </div>
-    <div class="col-md-6 mb-3"></div> <!-- Espaço vazio para alinhar -->
+
+    <!-- Espaço -->
+    <div class="col-md-4 mb-3"></div>
   </div>
 
-  <button type="submit" class="btn btn-primary">Cadastrar Equipamento</button>
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">{% if equipamento_id %}Salvar Alterações{% else %}Cadastrar Equipamento{% endif %}</button>
+    {% if equipamento_id %}
+      <a href="{% url 'cadastro_equipamento' %}" class="btn btn-secondary">Cancelar Edição</a>
+    {% endif %}
+  </div>
 </form>
 
-<!-- Listagem dos equipamentos continua igual -->
-<h4>Equipamentos cadastrados</h4>
+<!-- Listagem -->
+<h5>Equipamentos cadastrados</h5>
 <table class="table table-striped">
   <thead class="table-dark">
     <tr>
       <th>Projeto</th>
       <th>Unidade</th>
+      <th>Setor</th>
       <th>Nome</th>
       <th>Patrimônio</th>
       <th>Marca</th>
       <th>Modelo</th>
       <th>Tipo</th>
+      <th>Ações</th>
     </tr>
   </thead>
   <tbody>
@@ -94,20 +107,24 @@
       <tr>
         <td>{{ equipamento.unidade.projeto.nome }}</td>
         <td>{{ equipamento.unidade.nome }}</td>
+        <td>{{ equipamento.setor }}</td>
         <td>{{ equipamento.get_nome_display }}</td>
         <td>{{ equipamento.patrimonio }}</td>
         <td>{{ equipamento.marca }}</td>
         <td>{{ equipamento.modelo }}</td>
         <td>{{ equipamento.tipo }}</td>
+        <td>
+          <a href="{% url 'cadastro_equipamento_editar' equipamento.id %}" class="btn btn-sm btn-warning">Editar</a>
+        </td>
       </tr>
     {% empty %}
-      <tr><td colspan="7">Nenhum equipamento cadastrado.</td></tr>
+      <tr><td colspan="9">Nenhum equipamento cadastrado.</td></tr>
     {% endfor %}
   </tbody>
 </table>
 
 <script>
-  // Atualiza o formulário para mostrar unidades filtradas quando o projeto muda
+  // Atualiza unidades ao trocar o projeto
   document.getElementById('id_projeto').addEventListener('change', function() {
     this.form.submit();
   });

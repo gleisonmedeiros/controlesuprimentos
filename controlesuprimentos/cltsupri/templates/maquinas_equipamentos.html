@@ -3,10 +3,11 @@
 {% block content %}
 <h2 class="mb-3">Inventário de Máquinas e Equipamentos</h2>
 
-<!-- Filtro -->
-<form method="get" class="mb-4">
-  <div class="row g-3 align-items-end">
+<!-- Filtro + botão apagar todas -->
+<div class="row g-3 align-items-end mb-4">
 
+  <!-- Form de filtro -->
+  <form method="get" class="col-md-10 row g-3 align-items-end">
     <div class="col-md-3">
       <label for="unidade" class="form-label">Unidade Associada</label>
       <select name="unidade" id="unidade" class="form-select form-select-sm">
@@ -43,58 +44,66 @@
     </div>
 
     <div class="col-md-3">
-  <label for="fornecedor" class="form-label">Fornecedor Associado</label>
-  <select name="fornecedor" id="fornecedor" class="form-select form-select-sm">
-    <option value="">Todos</option>
-    {% for fornecedor in fornecedores %}
-      <option value="{{ fornecedor }}" {% if filtros.fornecedor_associado == fornecedor %}selected{% endif %}>{{ fornecedor }}</option>
-    {% endfor %}
-  </select>
-</div>
-
-    <div class="col-md-1">
-      <button type="submit" class="btn btn-primary btn-sm w-100">Filtrar</button>
+      <label for="fornecedor" class="form-label">Fornecedor Associado</label>
+      <select name="fornecedor" id="fornecedor" class="form-select form-select-sm">
+        <option value="">Todos</option>
+        {% for fornecedor in fornecedores %}
+          <option value="{{ fornecedor }}" {% if filtros.fornecedor_associado == fornecedor %}selected{% endif %}>{{ fornecedor }}</option>
+        {% endfor %}
+      </select>
     </div>
 
-    <div class="col-md-1">
-      <a href="{% url 'maquinas_equipamentos' %}" class="btn btn-secondary btn-sm w-100">Limpar</a>
+    <div class="col-md-auto">
+      <button type="submit" class="btn btn-primary btn-sm text-nowrap">Filtrar</button>
     </div>
 
+    <div class="col-md-auto">
+      <a href="{% url 'maquinas_equipamentos_por_unidade' %}" class="btn btn-secondary btn-sm text-nowrap">Limpar</a>
+    </div>
+  </form>
+
+  <!-- Botão Apagar Todas -->
+  <div class="col-md-2 text-end">
+    <form method="post" action="{% url 'apagar_todas_maquinas' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger btn-sm text-nowrap"
+        onclick="return confirm('Tem certeza que deseja apagar todas as máquinas?')">APAGAR TODAS</button>
+    </form>
   </div>
-</form>
+
+</div>
 
 <!-- Máquinas -->
 {% if maquinas %}
-  <p><strong>Máquinas Online:</strong> {{ on }} | <strong>Máquinas Offline:</strong> {{ off }}</p>
-
   <div class="table-responsive">
     <table class="table table-striped table-hover table-sm small align-middle">
       <thead class="table-light">
         <tr>
-          <th>Unidade Associada</th>
+          <th>Unidade</th>
           <th>Nome</th>
           <th>Tag</th>
           <th>Sistema Operacional</th>
           <th>Processador</th>
-          <th>Memória RAM (GB)</th>
+          <th>RAM<br>(GB)</th>
           <th>Placa-mãe</th>
           <th>Fabricante</th>
           <th>Disco</th>
-          <th>Tamanho Disco (GB)</th>
-          <th>Fornecedor Associado</th>
+          <th>Disco (GB)</th>
+          <th>Fornecedor</th>
           <th>Tempo Offline</th>
           <th>Status</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody>
         {% for m in maquinas %}
           <tr class="{% if m.status == 'OFF' %}text-danger{% else %}text-success{% endif %}">
-            <td>{{ m.unidade_associada }}</td>
+            <td>{{ m.unidade_associada_display }}</td>
             <td>{{ m.nome }}</td>
             <td>{{ m.tag }}</td>
             <td>{{ m.sistema_operacional }}</td>
             <td>{{ m.processador }}</td>
-            <td>{{ m.memoria_total }}</td>
+            <td>{{ m.memoria_total_display }}</td>
             <td>{{ m.placa_mae }}</td>
             <td>{{ m.fabricante_placa_mae }}</td>
             <td>{{ m.disco }}</td>
@@ -102,20 +111,18 @@
             <td>{{ m.fornecedor_associado }}</td>
             <td>{{ m.tempo_off_dias }}d {{ m.tempo_off_horas }}h {{ m.tempo_off_minutos }}m</td>
             <td><strong>{{ m.status }}</strong></td>
+            <td>
+              <form method="post" action="{% url 'deletar_maquina' m.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm"
+                        onclick="return confirm('Tem certeza que deseja excluir esta máquina?')">Apagar</button>
+              </form>
+            </td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-
-  {% if lista_off %}
-  <h5>Máquinas Offline:</h5>
-  <ul>
-    {% for nome in lista_off %}
-      <li>{{ nome }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
 {% else %}
   <p>Nenhuma máquina encontrada.</p>
 {% endif %}
@@ -134,6 +141,7 @@
           <th>Patrimônio</th>
           <th>Marca</th>
           <th>Modelo</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -145,6 +153,14 @@
             <td>{{ e.patrimonio }}</td>
             <td>{{ e.marca }}</td>
             <td>{{ e.modelo }}</td>
+            <td>
+              <a href="{% url 'editar_equipamento' e.id %}" class="btn btn-warning btn-sm">Editar</a>
+              <form method="post" action="{% url 'deletar_equipamento' e.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm"
+                        onclick="return confirm('Tem certeza que deseja excluir este equipamento?')">Apagar</button>
+              </form>
+            </td>
           </tr>
         {% endfor %}
       </tbody>

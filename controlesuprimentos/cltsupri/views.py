@@ -14,6 +14,7 @@ from django.shortcuts import redirect
 
 from django.shortcuts import render
 from .models import Maquina, UnidadeAssociacao, ModeloFornecedor
+from django.views.decorators.http import require_POST
 
 def iterando_erro(form):
     errors = []
@@ -689,27 +690,37 @@ def inventario(request):
         "maquinas_json": json.dumps(maquinas),
     })
 
-def cadastro_equipamento(request):
+def cadastro_equipamento(request, equipamento_id=None):
     projetos = Projeto.objects.all()
-    tipos = Equipamento.NOME_CHOICES  # seu campo de opções "nome"
+    tipos = Equipamento.NOME_CHOICES
 
     selected_projeto = request.POST.get('projeto', '') if request.method == 'POST' else ''
     selected_unidade = request.POST.get('unidade', '') if request.method == 'POST' else ''
 
+    equipamento_instance = None
+    if equipamento_id:
+        equipamento_instance = get_object_or_404(Equipamento, id=equipamento_id)
+        # Se não veio do POST, carrega do equipamento
+        if not selected_projeto:
+            selected_projeto = str(equipamento_instance.unidade.projeto.id)
+        if not selected_unidade:
+            selected_unidade = str(equipamento_instance.unidade.id)
+
+    # Filtra unidades conforme o projeto
     if selected_projeto:
         unidades = Unidade.objects.filter(projeto_id=selected_projeto)
     else:
         unidades = Unidade.objects.none()
 
     if request.method == 'POST' and 'patrimonio' in request.POST:
-        form = EquipamentoForm(request.POST)
+        form = EquipamentoForm(request.POST, instance=equipamento_instance)
         if form.is_valid():
             form.save()
             return redirect('cadastro_equipamento')
         else:
-            print("Form inválido. Erros:", form.errors)  # <-- Aqui imprime os erros
+            print("Form inválido. Erros:", form.errors)
     else:
-        form = EquipamentoForm()
+        form = EquipamentoForm(instance=equipamento_instance)
 
     equipamentos = Equipamento.objects.select_related('unidade').order_by('unidade__nome', 'patrimonio')
 
@@ -721,7 +732,9 @@ def cadastro_equipamento(request):
         'selected_projeto': selected_projeto,
         'selected_unidade': selected_unidade,
         'equipamentos': equipamentos,
+        'equipamento_id': equipamento_id,
     })
+
 
 def associar_unidade(request):
     if request.method == "POST":
@@ -768,15 +781,44 @@ def modelo_fornecedor_create(request):
 
     return render(request, 'modelo_fornecedor.html', {'form': form})
 
+from django.shortcuts import get_object_or_404, redirect
+from .forms import EquipamentoForm
+
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import Maquina, Equipamento, Unidade
+from .forms import EquipamentoForm
+
+# Deletar Máquina
+def deletar_maquina(request, pk):
+    if request.method == 'POST':
+        maquina = get_object_or_404(Maquina, pk=pk)
+        maquina.delete()
+    return redirect('maquinas_equipamentos_por_unidade')
+
+# Deletar Equipamento
+def deletar_equipamento(request, pk):
+    if request.method == 'POST':
+        equipamento = get_object_or_404(Equipamento, pk=pk)
+        equipamento.delete()
+    return redirect('maquinas_equipamentos_por_unidade')
+
+def apagar_todas_maquinas(request):
+    if request.method == 'POST':
+        print("OI")
+        Maquina.objects.all().delete()  # apaga todas as máquinas
+        messages.success(request, "Todas as máquinas foram apagadas com sucesso.")
+    return redirect('maquinas_equipamentos_por_unidade')
+
+# Listagem e filtros
 def maquinas_equipamentos_por_unidade(request):
     unidades = Unidade.objects.order_by('nome')
 
-    # Filtros via GET
+    # Filtros
     unidade_id = request.GET.get('unidade')
     status_maquina = request.GET.get('status')
     tipo_equipamento = request.GET.get('tipo')
     tempo_off_min = request.GET.get('tempo_off_min')
-    fornecedor_associado = request.GET.get('fornecedor')  # novo filtro
+    fornecedor_associado = request.GET.get('fornecedor')
 
     maquinas = Maquina.objects.all()
     equipamentos = Equipamento.objects.all()
@@ -794,18 +836,30 @@ def maquinas_equipamentos_por_unidade(request):
     if tipo_equipamento:
         equipamentos = equipamentos.filter(nome=tipo_equipamento)
 
-    # Filtra por tempo_off_dias >= tempo_off_min (se informado e número válido)
     if tempo_off_min:
         try:
             tempo_off_min_val = int(tempo_off_min)
             maquinas = maquinas.filter(tempo_off_dias__gte=tempo_off_min_val)
         except ValueError:
-            pass  # se não for número válido, ignora
+            pass
 
-    maquinas = maquinas.order_by('unidade_associada__nome', 'nome')
+    # Avalia o queryset e adiciona os atributos display
+    maquinas = list(maquinas.order_by('unidade_associada__nome', 'nome'))
+    for m in maquinas:
+        # Unidade: se None, exibe em branco
+        m.unidade_associada_display = m.unidade_associada or ''
+
+        # Memória RAM: se None ou < 1, exibe '-', senão apenas a parte inteira com ,0
+        try:
+            if not m.memoria_total or m.memoria_total < 1:
+                m.memoria_total_display = '-'
+            else:
+                m.memoria_total_display = f"{int(m.memoria_total)},0"
+        except (TypeError, ValueError):
+            m.memoria_total_display = '-'
+
     equipamentos = equipamentos.order_by('unidade__nome', 'nome')
 
-    # Lista fornecedores distintos para popular o filtro (removendo valores vazios)
     fornecedores = (
         Maquina.objects
         .values_list('fornecedor_associado', flat=True)
