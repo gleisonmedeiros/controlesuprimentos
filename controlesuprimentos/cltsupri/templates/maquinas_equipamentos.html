@@ -1,66 +1,77 @@
 {% extends 'index.html' %}
 
 {% block content %}
-<h2 class="mb-3">Inventário de Máquinas e Equipamentos</h2>
+<h5 class="mb-3">Inventário de Máquinas e Equipamentos</h5>
 
 <!-- Filtro + botão apagar todas -->
 <div class="row g-3 align-items-end mb-4">
+<form method="get" class="col-md-10 row g-3 align-items-end">
+  <!-- Linha 1: Projeto, Unidade, Status -->
+  <div class="col-md-4">
+    <label for="projeto" class="form-label">Projeto</label>
+    <select name="projeto" id="projeto" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for p in projetos %}
+        <option value="{{ p.id }}" {% if filtros.projeto_id == p.id|stringformat:'s' %}selected{% endif %}>{{ p.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
 
-  <!-- Form de filtro -->
-  <form method="get" class="col-md-10 row g-3 align-items-end">
-    <div class="col-md-3">
-      <label for="unidade" class="form-label">Unidade Associada</label>
-      <select name="unidade" id="unidade" class="form-select form-select-sm">
-        <option value="">Todas</option>
-        {% for u in unidades %}
-          <option value="{{ u.id }}" {% if filtros.unidade_id == u.id|stringformat:"s" %}selected{% endif %}>{{ u.nome }}</option>
-        {% endfor %}
-      </select>
-    </div>
+  <div class="col-md-4">
+    <label for="unidade" class="form-label">Unidade Associada</label>
+    <select name="unidade" id="unidade" class="form-select form-select-sm">
+      <option value="">Todas</option>
+      {% for u in unidades %}
+        <option value="{{ u.id }}" {% if filtros.unidade_id == u.id|stringformat:'s' %}selected{% endif %}>{{ u.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
 
-    <div class="col-md-2">
-      <label for="status" class="form-label">Status Máquina</label>
-      <select name="status" id="status" class="form-select form-select-sm">
-        <option value="">Todos</option>
-        <option value="ON" {% if filtros.status_maquina == "ON" %}selected{% endif %}>ON</option>
-        <option value="OFF" {% if filtros.status_maquina == "OFF" %}selected{% endif %}>OFF</option>
-      </select>
-    </div>
+  <div class="col-md-4">
+    <label for="status" class="form-label">Status Máquina</label>
+    <select name="status" id="status" class="form-select form-select-sm">
+      <option value="">Todos</option>
+      <option value="ON" {% if filtros.status_maquina == "ON" %}selected{% endif %}>ON</option>
+      <option value="OFF" {% if filtros.status_maquina == "OFF" %}selected{% endif %}>OFF</option>
+    </select>
+  </div>
 
-    <div class="col-md-2">
-      <label for="tipo" class="form-label">Tipo Equipamento</label>
-      <select name="tipo" id="tipo" class="form-select form-select-sm">
-        <option value="">Todos</option>
-        <option value="impressora" {% if filtros.tipo_equipamento == "impressora" %}selected{% endif %}>Impressora</option>
-        <option value="tv" {% if filtros.tipo_equipamento == "tv" %}selected{% endif %}>TV</option>
-        <option value="outro" {% if filtros.tipo_equipamento == "outro" %}selected{% endif %}>Outro</option>
-      </select>
-    </div>
+  <!-- Linha 2: Tipo, Tempo OFF, Fornecedor -->
+  <div class="col-md-4">
+    <label for="tipo" class="form-label">Tipo Equipamento</label>
+    <select name="tipo" id="tipo" class="form-select form-select-sm">
+      <option value="">Todos</option>
+      <option value="impressora" {% if filtros.tipo_equipamento == "impressora" %}selected{% endif %}>Impressora</option>
+      <option value="tv" {% if filtros.tipo_equipamento == "tv" %}selected{% endif %}>TV</option>
+      <option value="outro" {% if filtros.tipo_equipamento == "outro" %}selected{% endif %}>Outro</option>
+    </select>
+  </div>
 
-    <div class="col-md-2">
-      <label for="tempo_off_min" class="form-label">Tempo OFF mínimo (dias)</label>
-      <input type="number" name="tempo_off_min" id="tempo_off_min" min="0" class="form-control form-control-sm"
-             value="{{ filtros.tempo_off_min }}">
-    </div>
+  <div class="col-md-4">
+    <label for="tempo_off_min" class="form-label">Tempo OFF mínimo (dias)</label>
+    <input type="number" name="tempo_off_min" id="tempo_off_min" min="0" class="form-control form-control-sm"
+           value="{{ filtros.tempo_off_min }}">
+  </div>
 
-    <div class="col-md-3">
-      <label for="fornecedor" class="form-label">Fornecedor Associado</label>
-      <select name="fornecedor" id="fornecedor" class="form-select form-select-sm">
-        <option value="">Todos</option>
-        {% for fornecedor in fornecedores %}
-          <option value="{{ fornecedor }}" {% if filtros.fornecedor_associado == fornecedor %}selected{% endif %}>{{ fornecedor }}</option>
-        {% endfor %}
-      </select>
-    </div>
+  <div class="col-md-4">
+    <label for="fornecedor" class="form-label">Fornecedor Associado</label>
+    <select name="fornecedor" id="fornecedor" class="form-select form-select-sm">
+      <option value="">Todos</option>
+      {% for fornecedor in fornecedores %}
+        <option value="{{ fornecedor }}" {% if filtros.fornecedor_associado == fornecedor %}selected{% endif %}>{{ fornecedor }}</option>
+      {% endfor %}
+    </select>
+  </div>
 
-    <div class="col-md-auto">
-      <button type="submit" class="btn btn-primary btn-sm text-nowrap">Filtrar</button>
-    </div>
+  <!-- Linha 3: Botões Filtrar / Limpar -->
+  <div class="col-md-6 col-lg-3">
+    <button type="submit" class="btn btn-primary btn-sm text-nowrap w-100">Filtrar</button>
+  </div>
 
-    <div class="col-md-auto">
-      <a href="{% url 'maquinas_equipamentos_por_unidade' %}" class="btn btn-secondary btn-sm text-nowrap">Limpar</a>
-    </div>
-  </form>
+  <div class="col-md-6 col-lg-3">
+    <a href="{% url 'maquinas_equipamentos_por_unidade' %}" class="btn btn-secondary btn-sm text-nowrap w-100">Limpar</a>
+  </div>
+</form>
 
   <!-- Botão Apagar Todas -->
   <div class="col-md-2 text-end">
@@ -108,7 +119,7 @@
             <td>{{ m.fabricante_placa_mae }}</td>
             <td>{{ m.disco }}</td>
             <td>{{ m.tamanho_disco }}</td>
-            <td>{{ m.fornecedor_associado }}</td>
+            <td>{{ m.fornecedor_associado_display }}</td>
             <td>{{ m.tempo_off_dias }}d {{ m.tempo_off_horas }}h {{ m.tempo_off_minutos }}m</td>
             <td><strong>{{ m.status }}</strong></td>
             <td>

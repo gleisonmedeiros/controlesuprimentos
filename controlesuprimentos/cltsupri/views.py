@@ -15,6 +15,25 @@ from django.shortcuts import redirect
 from django.shortcuts import render
 from .models import Maquina, UnidadeAssociacao, ModeloFornecedor
 from django.views.decorators.http import require_POST
+from django.shortcuts import get_object_or_404, redirect
+from .forms import EquipamentoForm
+
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import Maquina, Equipamento, Unidade
+from .forms import EquipamentoForm
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import EntregaSuprimento, Suprimento, Unidade, Projeto
+from .forms import EntregaSuprimentoForm
+from datetime import datetime
+import json
+
+
+import json
+from datetime import datetime, timedelta
+from django.shortcuts import render
+
 
 def iterando_erro(form):
     errors = []
@@ -230,12 +249,6 @@ def criar_projeto(request):
 
     return render(request, 'cadastro_projeto.html', {'form': form})
 
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import EntregaSuprimento, Suprimento, Unidade, Projeto
-from .forms import EntregaSuprimentoForm
-from datetime import datetime
-import json
 
 
 @csrf_exempt
@@ -469,9 +482,6 @@ def pesquisa_entrega(request):
 #############################################
 
 
-import json
-from datetime import datetime, timedelta
-from django.shortcuts import render
 
 
 import json
@@ -708,7 +718,7 @@ def cadastro_equipamento(request, equipamento_id=None):
 
     # Filtra unidades conforme o projeto
     if selected_projeto:
-        unidades = Unidade.objects.filter(projeto_id=selected_projeto)
+        unidades = Unidade.objects.filter(projeto_id=selected_projeto).order_by("nome")
     else:
         unidades = Unidade.objects.none()
 
@@ -736,57 +746,148 @@ def cadastro_equipamento(request, equipamento_id=None):
     })
 
 
+from django.shortcuts import render, redirect
+from .models import Projeto, Unidade, UnidadeAssociacao, Maquina
+from .forms import UnidadeAssociacaoForm
+
 def associar_unidade(request):
+    selected_projeto = request.POST.get("projeto") or request.GET.get("projeto")
+    selected_unidade = request.POST.get("unidade") or request.GET.get("unidade")
+
     if request.method == "POST":
         form = UnidadeAssociacaoForm(request.POST)
         if form.is_valid():
             prefixo = form.cleaned_data['prefixo_nome']
             unidade = form.cleaned_data['unidade']
-            # Se já existir prefixo, atualiza unidade (sobrescrever)
-            associacao, created = UnidadeAssociacao.objects.update_or_create(
+
+            # Salva ou atualiza a associação
+            UnidadeAssociacao.objects.update_or_create(
                 prefixo_nome=prefixo,
                 defaults={'unidade': unidade}
             )
+
+            # Atualiza todas as máquinas cujo nome comece com o prefixo
+            Maquina.objects.filter(nome__startswith=prefixo).update(unidade_associada=unidade)
+
             return redirect('associar_unidade')
     else:
         form = UnidadeAssociacaoForm()
 
+    # Carregar todos os projetos
+    projetos = Projeto.objects.all()
+
+    # Se tem projeto selecionado, filtra unidades
+    if selected_projeto:
+        unidades = Unidade.objects.filter(projeto_id=selected_projeto).order_by("nome")
+    else:
+        unidades = Unidade.objects.none()  # vazio até escolher projeto
+
+    # Carregar todas as associações
     associacoes = UnidadeAssociacao.objects.select_related('unidade__projeto').all()
 
-    # Para popular combo projeto e unidade, se quiser filtro dinâmico também
-    projetos = Projeto.objects.all()
+    context = {
+        "form": form,
+        "associacoes": associacoes,
+        "projetos": projetos,
+        "unidades": unidades,
+        "selected_projeto": selected_projeto,
+        "selected_unidade": selected_unidade,
+    }
+
+    return render(request, "associar_unidade.html", context)
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import ModeloFornecedor, Maquina
+from .forms import ModeloFornecedorForm
+
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import ModeloFornecedor, Maquina
+from .forms import ModeloFornecedorForm
+
+def atualizar_fornecedores_maquinas():
+    """
+    Atualiza o campo 'fornecedor_associado' de todas as máquinas
+    com base nas associações de ModeloFornecedor.
+    """
+    for maquina in Maquina.objects.all():
+        fornecedor = None
+        # Procura a primeira associação cujo modelo está contido no nome da máquina
+        for assoc in ModeloFornecedor.objects.all():
+            if assoc.modelo.lower() in maquina.nome.lower():
+                fornecedor = assoc.fornecedor
+                break
+        maquina.fornecedor_associado = fornecedor
+        maquina.save()
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import ModeloFornecedor, Maquina
+from .forms import ModeloFornecedorForm
+
+def atualizar_fornecedores_maquinas():
+    """
+    Atualiza o campo 'fornecedor_associado' das máquinas conforme as associações existentes.
+    Para cada associação, define o fornecedor para todas as máquinas cujo nome contém o modelo.
+    """
+    # Primeiro, zera todos os fornecedores
+    Maquina.objects.update(fornecedor_associado=None)
+
+    # Depois, aplica todas as associações existentes
+    for assoc in ModeloFornecedor.objects.all():
+        Maquina.objects.filter(nome__icontains=assoc.modelo).update(fornecedor_associado=assoc.fornecedor)
+
+
+def modelo_fornecedor_manage(request, pk=None, action=None):
+    """
+    Criação, edição e exclusão de associações Modelo -> Fornecedor.
+    Atualiza automaticamente o campo 'fornecedor_associado' das máquinas.
+    """
+    # Exclusão
+    if action == 'delete' and pk:
+        associacao = get_object_or_404(ModeloFornecedor, pk=pk)
+        associacao.delete()
+        atualizar_fornecedores_maquinas()
+        return redirect('modelo-fornecedor-manage')
+
+    # Criação ou edição
+    if pk and action == 'edit':
+        associacao = get_object_or_404(ModeloFornecedor, pk=pk)
+        form = ModeloFornecedorForm(request.POST or None, instance=associacao)
+    else:
+        associacao = None
+        form = ModeloFornecedorForm(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        modelo = form.cleaned_data['modelo']
+        fornecedor = form.cleaned_data['fornecedor']
+
+        # Verifica duplicidade
+        qs = ModeloFornecedor.objects.filter(modelo=modelo, fornecedor=fornecedor)
+        if associacao:
+            qs = qs.exclude(pk=associacao.pk)
+
+        if qs.exists():
+            form.add_error(None, "Essa associação modelo-fornecedor já existe.")
+        else:
+            form.save()
+            atualizar_fornecedores_maquinas()
+            return redirect('modelo-fornecedor-manage')
+
+    # Atualiza fornecedores das máquinas também ao abrir a página
+    atualizar_fornecedores_maquinas()
+
+    # Todas as associações para exibir na tabela
+    associacoes = ModeloFornecedor.objects.all().order_by('modelo')
 
     context = {
         'form': form,
         'associacoes': associacoes,
-        'projetos': projetos,
+        'editando': bool(associacao),
+        'associacao_edit': associacao,
     }
-    return render(request, 'associar_unidade.html', context)
+    return render(request, 'modelo_fornecedor.html', context)
 
-
-def modelo_fornecedor_create(request):
-    if request.method == 'POST':
-        form = ModeloFornecedorForm(request.POST)
-        if form.is_valid():
-            modelo = form.cleaned_data['modelo']
-            fornecedor = form.cleaned_data['fornecedor']
-            # Usando o modelo do form.Meta para filtro
-            if ModeloFornecedor.objects.filter(modelo=modelo, fornecedor=fornecedor).exists():
-                form.add_error(None, "Essa associação modelo-fornecedor já existe.")
-            else:
-                form.save()
-                return redirect('modelo-fornecedor-create')
-    else:
-        form = ModeloFornecedorForm()
-
-    return render(request, 'modelo_fornecedor.html', {'form': form})
-
-from django.shortcuts import get_object_or_404, redirect
-from .forms import EquipamentoForm
-
-from django.shortcuts import render, get_object_or_404, redirect
-from .models import Maquina, Equipamento, Unidade
-from .forms import EquipamentoForm
 
 # Deletar Máquina
 def deletar_maquina(request, pk):
@@ -795,6 +896,7 @@ def deletar_maquina(request, pk):
         maquina.delete()
     return redirect('maquinas_equipamentos_por_unidade')
 
+
 # Deletar Equipamento
 def deletar_equipamento(request, pk):
     if request.method == 'POST':
@@ -802,40 +904,48 @@ def deletar_equipamento(request, pk):
         equipamento.delete()
     return redirect('maquinas_equipamentos_por_unidade')
 
+
 def apagar_todas_maquinas(request):
     if request.method == 'POST':
-        print("OI")
-        Maquina.objects.all().delete()  # apaga todas as máquinas
+        Maquina.objects.all().delete()
         messages.success(request, "Todas as máquinas foram apagadas com sucesso.")
     return redirect('maquinas_equipamentos_por_unidade')
 
-# Listagem e filtros
+
 def maquinas_equipamentos_por_unidade(request):
-    unidades = Unidade.objects.order_by('nome')
+    projetos = Projeto.objects.order_by('nome')
 
     # Filtros
+    projeto_id = request.GET.get('projeto')
     unidade_id = request.GET.get('unidade')
     status_maquina = request.GET.get('status')
     tipo_equipamento = request.GET.get('tipo')
     tempo_off_min = request.GET.get('tempo_off_min')
     fornecedor_associado = request.GET.get('fornecedor')
 
+    # Unidades
+    if projeto_id:
+        unidades = Unidade.objects.filter(projeto_id=projeto_id).order_by('nome')
+    else:
+        unidades = Unidade.objects.order_by('nome')
+
+    # Base queryset
     maquinas = Maquina.objects.all()
     equipamentos = Equipamento.objects.all()
 
+    # Aplicando filtros
+    if projeto_id:
+        maquinas = maquinas.filter(unidade_associada__projeto_id=projeto_id)
+        equipamentos = equipamentos.filter(unidade__projeto_id=projeto_id)
     if unidade_id:
         maquinas = maquinas.filter(unidade_associada_id=unidade_id)
         equipamentos = equipamentos.filter(unidade_id=unidade_id)
-
     if status_maquina:
         maquinas = maquinas.filter(status=status_maquina)
-
     if fornecedor_associado:
         maquinas = maquinas.filter(fornecedor_associado=fornecedor_associado)
-
     if tipo_equipamento:
         equipamentos = equipamentos.filter(nome=tipo_equipamento)
-
     if tempo_off_min:
         try:
             tempo_off_min_val = int(tempo_off_min)
@@ -843,38 +953,32 @@ def maquinas_equipamentos_por_unidade(request):
         except ValueError:
             pass
 
-    # Avalia o queryset e adiciona os atributos display
+    # Ordenação e atributos extras
     maquinas = list(maquinas.order_by('unidade_associada__nome', 'nome'))
     for m in maquinas:
-        # Unidade: se None, exibe em branco
         m.unidade_associada_display = m.unidade_associada or ''
-
-        # Memória RAM: se None ou < 1, exibe '-', senão apenas a parte inteira com ,0
-        try:
-            if not m.memoria_total or m.memoria_total < 1:
-                m.memoria_total_display = '-'
-            else:
-                m.memoria_total_display = f"{int(m.memoria_total)},0"
-        except (TypeError, ValueError):
-            m.memoria_total_display = '-'
+        m.memoria_total_display = f"{int(m.memoria_total)},0" if m.memoria_total and m.memoria_total >= 1 else '-'
+        m.fornecedor_associado_display = m.fornecedor_associado if m.fornecedor_associado else '-'
 
     equipamentos = equipamentos.order_by('unidade__nome', 'nome')
 
     fornecedores = (
         Maquina.objects
-        .values_list('fornecedor_associado', flat=True)
         .exclude(fornecedor_associado__isnull=True)
         .exclude(fornecedor_associado__exact='')
+        .values_list('fornecedor_associado', flat=True)
         .distinct()
         .order_by('fornecedor_associado')
     )
 
     return render(request, 'maquinas_equipamentos.html', {
+        'projetos': projetos,
         'unidades': unidades,
         'fornecedores': fornecedores,
         'maquinas': maquinas,
         'equipamentos': equipamentos,
         'filtros': {
+            'projeto_id': projeto_id or '',
             'unidade_id': unidade_id or '',
             'status_maquina': status_maquina or '',
             'tipo_equipamento': tipo_equipamento or '',

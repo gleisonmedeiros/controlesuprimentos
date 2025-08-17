@@ -2,22 +2,46 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2>Associar Unidade a Prefixo do Nome da Máquina</h2>
+    <h5>Associar Unidade a Prefixo do Nome da Máquina</h5>
 
-    <form method="post" class="mb-4">
-        {% csrf_token %}
-        <div class="mb-3">
-            {{ form.prefixo_nome.label_tag }}
-            {{ form.prefixo_nome }}
-        </div>
-        <div class="mb-3">
-            {{ form.unidade.label_tag }}
-            {{ form.unidade }}
-        </div>
-        <button type="submit" class="btn btn-primary">Salvar Associação</button>
-    </form>
+<form method="post" id="form-associacao" class="mb-4">
+    {% csrf_token %}
 
-    <h4>Associações Existentes</h4>
+    <div class="row">
+        <!-- Projeto -->
+        <div class="col-md-6 mb-3">
+            <label for="id_projeto">Projeto</label>
+            <select name="projeto" id="id_projeto" class="form-control">
+                <option value="">Selecione um Projeto</option>
+                {% for projeto in projetos %}
+                  <option value="{{ projeto.id }}" {% if projeto.id|stringformat:"s" == selected_projeto %}selected{% endif %}>{{ projeto.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Unidade -->
+        <div class="col-md-6 mb-3">
+            <label for="id_unidade">Unidade</label>
+            <select name="unidade" id="id_unidade" class="form-control">
+                <option value="">Selecione uma Unidade</option>
+                {% for unidade in unidades %}
+                  <option value="{{ unidade.id }}" {% if unidade.id|stringformat:"s" == selected_unidade %}selected{% endif %}>{{ unidade.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Prefixo -->
+    <div class="mb-3">
+        {{ form.prefixo_nome.label_tag }}
+        {{ form.prefixo_nome }}
+    </div>
+
+    <button type="submit" class="btn btn-primary">Salvar Associação</button>
+</form>
+
+
+    <h5>Associações Existentes</h5>
     <table class="table table-striped">
         <thead>
             <tr>
@@ -39,4 +63,11 @@
         </tbody>
     </table>
 </div>
+
+<script>
+  // Quando trocar o projeto, envia o formulário para recarregar as unidades
+  document.getElementById('id_projeto').addEventListener('change', function() {
+    document.getElementById('form-associacao').submit();
+  });
+</script>
 {% endblock %}

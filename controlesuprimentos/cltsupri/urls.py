@@ -17,7 +17,7 @@ urlpatterns = [
     path('inventario/', views.inventario, name='inventario'),
     path('equipamentos/', views.cadastro_equipamento, name='cadastro_equipamento'),
     path('associar-unidade/', views.associar_unidade, name='associar_unidade'),
-    path('modelo-fornecedor/', views.modelo_fornecedor_create, name='modelo-fornecedor-create'),
+    path('modelo-fornecedor/', views.modelo_fornecedor_manage, name='modelo-fornecedor-create'),
     path('maquinas-equipamentos/', views.maquinas_equipamentos_por_unidade, name='maquinas_equipamentos'),
     path('equipamentos/<int:equipamento_id>/', views.cadastro_equipamento, name='cadastro_equipamento_editar'),
     path('maquinas-equipamentos/', views.maquinas_equipamentos_por_unidade, name='maquinas_equipamentos_por_unidade'),
@@ -25,5 +25,9 @@ urlpatterns = [
     path('equipamentos/<int:pk>/', views.cadastro_equipamento, name='editar_equipamento'),
     path('equipamento/<int:pk>/deletar/', views.deletar_equipamento, name='deletar_equipamento'),
     path('apagar-todas-maquinas/', views.apagar_todas_maquinas, name='apagar_todas_maquinas'),
-
+    path('modelo-fornecedor/', views.modelo_fornecedor_manage, name='modelo-fornecedor-manage'),
+    path('modelo-fornecedor/edit/<int:pk>/', views.modelo_fornecedor_manage, {'action': 'edit'},
+         name='modelo-fornecedor-edit'),
+    path('modelo-fornecedor/delete/<int:pk>/', views.modelo_fornecedor_manage, {'action': 'delete'},
+         name='modelo-fornecedor-delete'),
 ]
