@@ -1,39 +1,45 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.views.decorators.csrf import csrf_exempt
 
-from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm, EquipamentoForm,UnidadeAssociacaoForm,ModeloFornecedorForm
-from .models import Projeto, Unidade, Suprimento, EntregaSuprimento, Equipamento,UnidadeAssociacao, ModeloFornecedor
-import json
-from datetime import datetime, timedelta
-import os
-from django.conf import settings
-from django.shortcuts import get_object_or_404, redirect, render
-from datetime import datetime
+
+from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm
 from django.contrib import messages
-from django.shortcuts import redirect
-
-from django.shortcuts import render
-from .models import Maquina, UnidadeAssociacao, ModeloFornecedor
-from django.views.decorators.http import require_POST
-from django.shortcuts import get_object_or_404, redirect
-from .forms import EquipamentoForm
-
-from django.shortcuts import render, get_object_or_404, redirect
-from .models import Maquina, Equipamento, Unidade
-from .forms import EquipamentoForm
+from .models import Equipamento, EntregaSuprimento, Suprimento, Projeto, Unidade, UnidadeAssociacao, ModeloFornecedor, Maquina
+from .forms import EquipamentoForm, ModeloFornecedorForm, UnidadeAssociacaoForm
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import EntregaSuprimento, Suprimento, Unidade, Projeto
-from .forms import EntregaSuprimentoForm
-from datetime import datetime
-import json
-
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from .forms import LoginForm
 
 import json
-from datetime import datetime, timedelta
-from django.shortcuts import render
 
+from datetime import timedelta, datetime
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from .forms import LoginForm
+from django.contrib.auth.forms import AuthenticationForm
+
+
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('index')
+
+    form = LoginForm(request, data=request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        login(request, form.get_user())
+        return redirect('index')
+
+    return render(request, 'login.html', {'form': form})
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
 
 def iterando_erro(form):
     errors = []
@@ -43,7 +49,7 @@ def iterando_erro(form):
     return errors
 
 id = 0
-
+@login_required(login_url='login')
 def pesquisa(request):
     entregas_ordenadas = EntregaSuprimento.objects.all().order_by('data')
     form_projeto = Projeto.objects.all()
@@ -87,7 +93,7 @@ def pesquisa(request):
         'form_unidades': form_unidades
     })
 
-
+@login_required(login_url='login')
 def total_unidade(request):
     entregas_ordenadas = EntregaSuprimento.objects.all().order_by('data')
     form_projeto = Projeto.objects.all()
@@ -134,6 +140,7 @@ def total_unidade(request):
 
 
 # Create your views here.
+@login_required(login_url='login')
 def index(request):
     if request.method == 'POST':
         cadastro_opcao = request.POST.get('cadastro_opcao')
@@ -147,6 +154,7 @@ def index(request):
 
     return render(request, 'index.html')
 
+@login_required(login_url='login')
 def criar_unidade(request):
     if request.method == 'POST':
         editar = request.session.get('editar', None)
@@ -192,6 +200,7 @@ def criar_unidade(request):
 
     return render(request, 'cadastro_unidade.html', {'form': form})
 
+@login_required(login_url='login')
 def criar_suprimento(request):
     if request.method == 'POST':
         form = SuprimentoForm(request.POST)
@@ -229,6 +238,7 @@ def criar_suprimento(request):
 
     return render(request, 'cadastro_suprimento.html', {'form': form})
 
+@login_required(login_url='login')
 def criar_projeto(request):
     if request.method == 'POST':
         form = ProjetoForm(request.POST)
@@ -250,7 +260,7 @@ def criar_projeto(request):
     return render(request, 'cadastro_projeto.html', {'form': form})
 
 
-
+@login_required(login_url='login')
 @csrf_exempt
 def entrega_suprimento(request):
     form_projeto = Projeto.objects.all().order_by('nome')
@@ -395,19 +405,8 @@ def entrega_suprimento(request):
         'form_projeto': form_projeto,
         'unidades': unidades,
     })
-def processar_selecao(request):
-    pass
-'''
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        selected_value = data.get('selected')
-        print(selected_value)
 
-        # Aqui você pode realizar alguma ação com o valor selecionado
-        # Exemplo de resposta
-        return JsonResponse({'result': selected_value})
-'''
-
+@login_required(login_url='login')
 def pesquisa_suprimento(request):
     form = Suprimento.objects.all()
     if request.method == 'POST':
@@ -422,6 +421,7 @@ def pesquisa_suprimento(request):
     else:
         return render(request, 'pesquisa_suprimentos.html',{'form':form})
 
+@login_required(login_url='login')
 def pesquisa_unidade(request):
     form_projeto = UnidadeForm()
     form = Unidade.objects.all()
@@ -437,11 +437,7 @@ def pesquisa_unidade(request):
     else:
         return render(request, 'pesquisa_unidades.html', {'form': form,'form_projeto':form_projeto})
 
-from datetime import datetime
-from django.shortcuts import render, redirect, get_object_or_404
-
-
-
+@login_required(login_url='login')
 def pesquisa_entrega(request):
     entrega_id = request.session.get('entrega_id')
     if not entrega_id:
@@ -484,9 +480,7 @@ def pesquisa_entrega(request):
 
 
 
-import json
-from django.shortcuts import render
-from .models import Maquina
+
 
 # Suas funções auxiliares (exemplo)
 def get_safe(dct, keys, default=None):
@@ -500,14 +494,14 @@ def get_safe(dct, keys, default=None):
 def esta_off_mais_de_10_dias(timestamp_ms):
     # Implemente sua lógica aqui, ex:
     # Retorna True se timestamp estiver > 10 dias atrás
-    from datetime import datetime, timedelta
+
     if timestamp_ms is None:
         return True
     ultimo = datetime.fromtimestamp(timestamp_ms / 1000)
     return (datetime.now() - ultimo) > timedelta(days=10)
 
 def calcular_tempo_desde_timestamp(timestamp_ms):
-    from datetime import datetime
+
     if timestamp_ms is None:
         return {'dias': 0, 'horas': 0, 'minutos': 0}
     ultimo = datetime.fromtimestamp(timestamp_ms / 1000)
@@ -517,8 +511,7 @@ def calcular_tempo_desde_timestamp(timestamp_ms):
     minutos = (delta.seconds % 3600) // 60
     return {'dias': dias, 'horas': horas, 'minutos': minutos}
 
-
-
+@login_required(login_url='login')
 def inventario(request):
     ON = 0
     OFF = 0
@@ -700,6 +693,7 @@ def inventario(request):
         "maquinas_json": json.dumps(maquinas),
     })
 
+@login_required(login_url='login')
 def cadastro_equipamento(request, equipamento_id=None):
     projetos = Projeto.objects.all()
     tipos = Equipamento.NOME_CHOICES
@@ -745,11 +739,7 @@ def cadastro_equipamento(request, equipamento_id=None):
         'equipamento_id': equipamento_id,
     })
 
-
-from django.shortcuts import render, redirect
-from .models import Projeto, Unidade, UnidadeAssociacao, Maquina
-from .forms import UnidadeAssociacaoForm
-
+@login_required(login_url='login')
 def associar_unidade(request):
     selected_projeto = request.POST.get("projeto") or request.GET.get("projeto")
     selected_unidade = request.POST.get("unidade") or request.GET.get("unidade")
@@ -796,61 +786,20 @@ def associar_unidade(request):
 
     return render(request, "associar_unidade.html", context)
 
-
-from django.shortcuts import render, redirect, get_object_or_404
-from .models import ModeloFornecedor, Maquina
-from .forms import ModeloFornecedorForm
-
-from django.shortcuts import render, redirect, get_object_or_404
-from .models import ModeloFornecedor, Maquina
-from .forms import ModeloFornecedorForm
-
-def atualizar_fornecedores_maquinas():
-    """
-    Atualiza o campo 'fornecedor_associado' de todas as máquinas
-    com base nas associações de ModeloFornecedor.
-    """
-    for maquina in Maquina.objects.all():
-        fornecedor = None
-        # Procura a primeira associação cujo modelo está contido no nome da máquina
-        for assoc in ModeloFornecedor.objects.all():
-            if assoc.modelo.lower() in maquina.nome.lower():
-                fornecedor = assoc.fornecedor
-                break
-        maquina.fornecedor_associado = fornecedor
-        maquina.save()
-
-
-from django.shortcuts import render, get_object_or_404, redirect
-from .models import ModeloFornecedor, Maquina
-from .forms import ModeloFornecedorForm
-
-def atualizar_fornecedores_maquinas():
-    """
-    Atualiza o campo 'fornecedor_associado' das máquinas conforme as associações existentes.
-    Para cada associação, define o fornecedor para todas as máquinas cujo nome contém o modelo.
-    """
-    # Primeiro, zera todos os fornecedores
-    Maquina.objects.update(fornecedor_associado=None)
-
-    # Depois, aplica todas as associações existentes
-    for assoc in ModeloFornecedor.objects.all():
-        Maquina.objects.filter(nome__icontains=assoc.modelo).update(fornecedor_associado=assoc.fornecedor)
-
-
+@login_required(login_url='login')
 def modelo_fornecedor_manage(request, pk=None, action=None):
-    """
-    Criação, edição e exclusão de associações Modelo -> Fornecedor.
-    Atualiza automaticamente o campo 'fornecedor_associado' das máquinas.
-    """
-    # Exclusão
+    # Excluir
     if action == 'delete' and pk:
         associacao = get_object_or_404(ModeloFornecedor, pk=pk)
+        modelo = associacao.modelo
         associacao.delete()
-        atualizar_fornecedores_maquinas()
+
+        # Opcional: limpar fornecedor_associado das máquinas desse modelo
+        Maquina.objects.filter(placa_mae=modelo).update(fornecedor_associado=None)
+
         return redirect('modelo-fornecedor-manage')
 
-    # Criação ou edição
+    # Editar ou Criar
     if pk and action == 'edit':
         associacao = get_object_or_404(ModeloFornecedor, pk=pk)
         form = ModeloFornecedorForm(request.POST or None, instance=associacao)
@@ -871,25 +820,23 @@ def modelo_fornecedor_manage(request, pk=None, action=None):
             form.add_error(None, "Essa associação modelo-fornecedor já existe.")
         else:
             form.save()
-            atualizar_fornecedores_maquinas()
+            # Atualiza máquinas desse modelo
+            Maquina.objects.filter(placa_mae=modelo).update(fornecedor_associado=fornecedor)
             return redirect('modelo-fornecedor-manage')
 
-    # Atualiza fornecedores das máquinas também ao abrir a página
-    atualizar_fornecedores_maquinas()
-
-    # Todas as associações para exibir na tabela
+    # Listagem
     associacoes = ModeloFornecedor.objects.all().order_by('modelo')
-
-    context = {
+    return render(request, 'modelo_fornecedor.html', {
         'form': form,
         'associacoes': associacoes,
         'editando': bool(associacao),
         'associacao_edit': associacao,
-    }
-    return render(request, 'modelo_fornecedor.html', context)
+    })
+
 
 
 # Deletar Máquina
+@login_required(login_url='login')
 def deletar_maquina(request, pk):
     if request.method == 'POST':
         maquina = get_object_or_404(Maquina, pk=pk)
@@ -898,20 +845,21 @@ def deletar_maquina(request, pk):
 
 
 # Deletar Equipamento
+@login_required(login_url='login')
 def deletar_equipamento(request, pk):
     if request.method == 'POST':
         equipamento = get_object_or_404(Equipamento, pk=pk)
         equipamento.delete()
     return redirect('maquinas_equipamentos_por_unidade')
 
-
+@login_required(login_url='login')
 def apagar_todas_maquinas(request):
     if request.method == 'POST':
         Maquina.objects.all().delete()
         messages.success(request, "Todas as máquinas foram apagadas com sucesso.")
     return redirect('maquinas_equipamentos_por_unidade')
 
-
+@login_required(login_url='login')
 def maquinas_equipamentos_por_unidade(request):
     projetos = Projeto.objects.order_by('nome')
 

@@ -1,14 +1,21 @@
 from django.urls import path
 from . import views
+from django.contrib import admin
+from django.urls import path
+from django.contrib.auth import views as auth_views
+
 
 urlpatterns = [
-    path('index/',views.index, name='index'),
+    # Login / Logout
+    path('', views.index, name='index'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
     path('unidade/', views.criar_unidade, name='criar_unidade'),
     path('suprimento/', views.criar_suprimento, name='criar_suprimento'),
     path('projeto/', views.criar_projeto, name='criar_projeto'),
     path('', views.index, name='index'),
     path('entrega_suprimento/', views.entrega_suprimento, name='entrega_suprimento'),
-    path('processar-selecao/', views.processar_selecao, name='processar_selecao'),
+    #path('processar-selecao/', views.processar_selecao, name='processar_selecao'),
     path('pesquisa/', views.pesquisa, name='pesquisa'),
     path('total_unidade/', views.total_unidade, name='total_unidade'),
     path('pesquisa_suprimento/', views.pesquisa_suprimento, name='pesquisa_suprimento'),

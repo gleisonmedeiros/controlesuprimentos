@@ -1,6 +1,19 @@
 from django import forms
 from .models import Unidade, Suprimento, EntregaSuprimento, Projeto, Equipamento, UnidadeAssociacao, ModeloFornecedor, Maquina
 
+from django import forms
+from django.contrib.auth.forms import AuthenticationForm
+
+class LoginForm(AuthenticationForm):
+    username = forms.CharField(
+        label="Usuário",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Digite seu usuário'})
+    )
+    password = forms.CharField(
+        label="Senha",
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Digite sua senha'})
+    )
+
 class ModeloFornecedorForm(forms.ModelForm):
     modelo = forms.ChoiceField(label="Placa Mãe")
     fornecedor = forms.ChoiceField(
@@ -16,7 +29,7 @@ class ModeloFornecedorForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         # Obtemos placas e marcas únicas
-        placas = Maquina.objects.values_list('placa_mae', 'fabricante_placa_mae').distinct()
+        placas = Maquina.objects.values_list('placa_mae', 'fabricante_placa_mae').distinct().order_by('placa_mae')
         placas = [(p, f) for p, f in placas if p]
 
         # Criamos as opções com label "Marca - Placa"

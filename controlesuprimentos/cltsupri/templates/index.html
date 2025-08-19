@@ -10,17 +10,15 @@
     </button>
 
     <div class="collapse navbar-collapse" id="navbarNav">
+      <!-- Menu principal à esquerda -->
       <ul class="navbar-nav me-auto">
-        <!-- Início -->
         <li class="nav-item">
           <a class="nav-link" href="{% url 'index' %}">Início</a>
         </li>
 
         <!-- Cadastro -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-            Cadastro
-          </a>
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Cadastro</a>
           <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="{% url 'criar_projeto' %}">Projeto</a></li>
             <li><a class="dropdown-item" href="{% url 'criar_unidade' %}">Unidade</a></li>
@@ -31,9 +29,7 @@
 
         <!-- Pesquisa -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-            Pesquisa
-          </a>
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Pesquisa</a>
           <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="{% url 'pesquisa_suprimento' %}">Suprimento</a></li>
             <li><a class="dropdown-item" href="{% url 'pesquisa_unidade' %}">Unidade</a></li>
@@ -42,9 +38,7 @@
 
         <!-- Relatórios -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-            Relatório
-          </a>
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Relatório</a>
           <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="{% url 'pesquisa' %}">Geral</a></li>
             <li><a class="dropdown-item" href="{% url 'total_unidade' %}">Total por Unidade</a></li>
@@ -53,18 +47,31 @@
 
         <!-- Inventário -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-            Inventário
-          </a>
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Inventário</a>
           <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="{% url 'inventario' %}">Importar</a></li>
-            <li><a class="dropdown-item" href="{% url 'cadastro_equipamento' %}">Cadastro Manual de Equipamentos</a></li>
+            <li><a class="dropdown-item" href="{% url 'cadastro_equipamento' %}">Cadastro Manual</a></li>
             <li><a class="dropdown-item" href="{% url 'associar_unidade' %}">Associar Unidade</a></li>
-            <li><a class="dropdown-item" href="{% url 'modelo-fornecedor-create' %}">Associar Modelo x Fornecedor</a></li>
+            <li><a class="dropdown-item" href="{% url 'modelo-fornecedor-create' %}">Modelo x Fornecedor</a></li>
             <li><a class="dropdown-item" href="{% url 'maquinas_equipamentos' %}">Relatório Geral</a></li>
           </ul>
         </li>
+      </ul>
 
+      <!-- Menu usuário à direita -->
+      <ul class="navbar-nav ms-auto">
+        {% if user.is_authenticated %}
+          <li class="nav-item">
+            <span class="nav-link fw-bold">{{ user.username }}</span>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'logout' %}">Sair</a>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'login' %}">Entrar</a>
+          </li>
+        {% endif %}
       </ul>
     </div>
   </div>
@@ -74,13 +81,15 @@
 <div class="mt-4"></div>
 
 {% block content %}
+<!-- Aqui vai o conteúdo da página -->
+<h1 class="text-center">Bem-vindo ao Controle de Infraestrutura</h1>
 {% endblock %}
 
 <!-- Espaço antes do rodapé -->
 <div class="mb-5"></div>
 
-<!-- Rodapé bonito e discreto -->
+<!-- Rodapé -->
 <footer class="bg-dark text-white text-center py-2 mt-auto fixed-bottom shadow-sm">
-  <small>Desenvolvido por Gleison © {{ now|date:"Y" }}</small>
+  <small>Desenvolvido por Infra ECO © {{ now|date:"Y" }}</small>
 </footer>
 {% endblock %}
