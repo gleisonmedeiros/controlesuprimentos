@@ -37,4 +37,5 @@ urlpatterns = [
          name='modelo-fornecedor-edit'),
     path('modelo-fornecedor/delete/<int:pk>/', views.modelo_fornecedor_manage, {'action': 'delete'},
          name='modelo-fornecedor-delete'),
+    path("maquinas/exportar/", views.exportar_maquinas_excel, name="exportar_maquinas_excel"),
 ]

@@ -82,6 +82,11 @@
     </form>
   </div>
 
+  <div class="col-md-6 col-lg-3">
+  <a href="{% url 'exportar_maquinas_excel' %}?projeto={{ filtros.projeto_id }}&unidade={{ filtros.unidade_id }}&status={{ filtros.status_maquina }}&tipo={{ filtros.tipo_equipamento }}&tempo_off_min={{ filtros.tempo_off_min }}&fornecedor={{ filtros.fornecedor_associado }}"
+     class="btn btn-success btn-sm text-nowrap w-100">Exportar Excel</a>
+</div>
+
 </div>
 
 <!-- Máquinas -->
@@ -148,6 +153,7 @@
         <tr>
           <th>Unidade</th>
           <th>Nome</th>
+          <th>Setor</th>
           <th>Tipo</th>
           <th>Patrimônio</th>
           <th>Marca</th>
@@ -160,6 +166,7 @@
           <tr>
             <td>{{ e.unidade }}</td>
             <td>{{ e.get_nome_display }}</td>
+            <td>{{ e.setor }}</td>
             <td>{{ e.tipo }}</td>
             <td>{{ e.patrimonio }}</td>
             <td>{{ e.marca }}</td>

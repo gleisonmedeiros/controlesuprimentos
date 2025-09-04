@@ -1,5 +1,7 @@
 
-
+import openpyxl
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
 from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm
 from django.contrib import messages
 from .models import Equipamento, EntregaSuprimento, Suprimento, Projeto, Unidade, UnidadeAssociacao, ModeloFornecedor, Maquina
@@ -934,3 +936,87 @@ def maquinas_equipamentos_por_unidade(request):
             'fornecedor_associado': fornecedor_associado or '',
         }
     })
+
+@login_required(login_url='login')
+def exportar_maquinas_excel(request):
+    # Pega os mesmos filtros da tela
+    projeto_id = request.GET.get('projeto')
+    unidade_id = request.GET.get('unidade')
+    status_maquina = request.GET.get('status')
+    tipo_equipamento = request.GET.get('tipo')
+    tempo_off_min = request.GET.get('tempo_off_min')
+    fornecedor_associado = request.GET.get('fornecedor')
+
+    maquinas = Maquina.objects.all()
+    equipamentos = Equipamento.objects.all()
+
+    if projeto_id:
+        maquinas = maquinas.filter(unidade_associada__projeto_id=projeto_id)
+        equipamentos = equipamentos.filter(unidade__projeto_id=projeto_id)
+    if unidade_id:
+        maquinas = maquinas.filter(unidade_associada_id=unidade_id)
+        equipamentos = equipamentos.filter(unidade_id=unidade_id)
+    if status_maquina:
+        maquinas = maquinas.filter(status=status_maquina)
+    if fornecedor_associado:
+        maquinas = maquinas.filter(fornecedor_associado=fornecedor_associado)
+    if tipo_equipamento:
+        equipamentos = equipamentos.filter(nome=tipo_equipamento)
+    if tempo_off_min:
+        try:
+            tempo_off_min_val = int(tempo_off_min)
+            maquinas = maquinas.filter(tempo_off_dias__gte=tempo_off_min_val)
+        except ValueError:
+            pass
+
+    # Cria workbook e worksheet
+    wb = openpyxl.Workbook()
+    ws1 = wb.active
+    ws1.title = "Máquinas"
+
+    # Cabeçalhos
+    ws1.append([
+        "Unidade", "Nome", "Tag", "SO", "Processador",
+        "RAM (GB)", "Placa-mãe", "Fabricante", "Disco",
+        "Disco (GB)", "Fornecedor", "Tempo OFF", "Status"
+    ])
+
+    # Linhas das máquinas
+    for m in maquinas:
+        ws1.append([
+            str(m.unidade_associada),
+            m.nome,
+            m.tag,
+            m.sistema_operacional,
+            m.processador,
+            m.memoria_total,
+            m.placa_mae,
+            m.fabricante_placa_mae,
+            m.disco,
+            m.tamanho_disco,
+            m.fornecedor_associado,
+            f"{m.tempo_off_dias}d {m.tempo_off_horas}h {m.tempo_off_minutos}m",
+            m.status,
+        ])
+
+    # Nova aba para equipamentos
+    ws2 = wb.create_sheet("Equipamentos")
+    ws2.append(["Unidade", "Nome","Setor", "Tipo", "Patrimônio", "Marca", "Modelo"])
+    for e in equipamentos:
+        ws2.append([
+            str(e.unidade),
+            e.get_nome_display(),
+            e.setor,
+            e.tipo,
+            e.patrimonio,
+            e.marca,
+            e.modelo,
+        ])
+
+    # Resposta HTTP para download
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="maquinas_equipamentos.xlsx"'
+    wb.save(response)
+    return response
