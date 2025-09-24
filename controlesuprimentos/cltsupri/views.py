@@ -564,7 +564,11 @@ def inventario(request):
                     drives = get_safe(item, ["sys", "hardware", "windows", "drives"], [])
                     if drives:
                         disco = drives[0].get("Model", "-")
-                        tamanho_disco_bytes = int(drives[0].get("Size", 0))
+                        tamanho_disco = drives[0].get("Size", 0)
+                        if tamanho_disco is None:
+                            tamanho_disco_bytes = 0
+                        else:
+                            tamanho_disco_bytes = int(tamanho_disco)
                         tamanho_disco_gb = round(tamanho_disco_bytes / (1024 ** 3), 2) if tamanho_disco_bytes > 0 else None
                     else:
                         disco = "-"
