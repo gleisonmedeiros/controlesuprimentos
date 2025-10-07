@@ -1,20 +1,34 @@
 {% extends 'index.html' %}
 
 {% block content %}
-<h5 class="mb-3">Inventário de Máquinas</h2>
+<h5 class="mb-3">Inventário de Máquinas: </h5>
+
+<!-- Select único de projeto -->
+<div class="mb-3">
+    <label for="projeto" class="form-label">Selecione o Projeto:</label>
+    <select id="projeto" class="form-select form-select-sm w-25">
+      {% for projeto in projetos %}
+      <option value="{{ projeto.id }}" {% if forloop.first %}selected{% endif %}>
+        {{ projeto.nome }}
+      </option>
+      {% endfor %}
+    </select>
+</div>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
   <!-- Form importar -->
   <form method="post" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
     {% csrf_token %}
+    <input type="hidden" name="projeto_id" id="projeto_importar_hidden">
     <label for="arquivo" class="form-label me-2 mb-0">Enviar arquivo JSON:</label>
     <input type="file" name="arquivo" accept=".json" required class="form-control form-control-sm w-auto">
     <button type="submit" class="btn btn-primary btn-sm">Importar</button>
   </form>
 
   <!-- Form salvar -->
-  <form method="post">
+  <form method="post" class="d-flex align-items-center gap-2">
     {% csrf_token %}
+    <input type="hidden" name="projeto_id" id="projeto_salvar_hidden">
     <textarea name="maquinas_json" hidden>{{ maquinas_json }}</textarea>
     <button type="submit" name="salvar" class="btn btn-success btn-sm">Salvar Inventário</button>
   </form>
@@ -80,4 +94,14 @@
   </ul>
   {% endif %}
 {% endif %}
+
+<!-- Script para enviar o projeto selecionado para ambos os forms -->
+<script>
+  document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', () => {
+      const selectedProjeto = document.getElementById('projeto').value;
+      form.querySelector('input[name="projeto_id"]').value = selectedProjeto;
+    });
+  });
+</script>
 {% endblock %}

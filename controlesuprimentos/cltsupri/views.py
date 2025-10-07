@@ -515,10 +515,12 @@ def calcular_tempo_desde_timestamp(timestamp_ms):
 
 @login_required(login_url='login')
 def inventario(request):
+    projetos = Projeto.objects.all()
     ON = 0
     OFF = 0
     lista_nomes_maquinas_offline = []
     maquinas = []
+
 
     if request.method == "POST":
         if request.FILES.get("arquivo"):
@@ -585,16 +587,22 @@ def inventario(request):
 
                     tempo_off = calcular_tempo_desde_timestamp(timestamp_ms)
 
-                    associacao = None
-                    for i in range(len(nome_maquina), 0, -1):
-                        prefixo = nome_maquina[:i]
-                        associacao = UnidadeAssociacao.objects.filter(prefixo_nome=prefixo).first()
-                        if associacao:
-                            break
+                    projeto_id = request.POST.get("projeto_id")
+                    projeto = Projeto.objects.filter(id=projeto_id).first()
 
-                    unidade_associada = associacao.unidade if associacao else None
+
+                    request.session['projeto_id'] = projeto_id
+
+                    print(f' >>>> {projeto}')
+
+
+                    unidade_associada, _ = Unidade.objects.get_or_create(
+                        projeto=projeto,
+                        nome="-",
+                    )
 
                     maquinas.append({
+                        "unidade_associada": unidade_associada.nome,
                         "nome": nome_maquina,
                         "tag": tag,
                         "sistema_operacional": sistema_operacional,
@@ -608,7 +616,6 @@ def inventario(request):
                         "tempo_off_horas": tempo_off['horas'],
                         "tempo_off_minutos": tempo_off['minutos'],
                         "status": status,
-                        "unidade_associada": unidade_associada.nome if unidade_associada else "",
                         "fornecedor_associado": fornecedor_associado,
                     })
 
@@ -619,6 +626,7 @@ def inventario(request):
                     "off": OFF,
                     "lista_off": lista_nomes_maquinas_offline,
                     "maquinas_json": json.dumps(maquinas),
+                    "projetos": projetos,
                 })
 
             except json.JSONDecodeError:
@@ -632,6 +640,7 @@ def inventario(request):
             maquinas_para_salvar = json.loads(maquinas_json)
 
             for m in maquinas_para_salvar:
+                '''
                 associacao = None
                 for i in range(len(m["nome"]), 0, -1):
                     prefixo = m["nome"][:i]
@@ -639,10 +648,20 @@ def inventario(request):
                     if associacao:
                         break
                 unidade_associada = associacao.unidade if associacao else None
+                '''
+
+                projeto_id = request.session.get('projeto_id')
+                projeto = Projeto.objects.filter(id=projeto_id).first()
+
+                unidade_associada = Unidade.objects.filter(
+                    projeto=projeto,
+                    nome="-",
+                ).first()
 
                 Maquina.objects.update_or_create(
                     nome=m["nome"],
                     defaults={
+                        "unidade_associada": unidade_associada.nome,
                         "tag": m["tag"],
                         "sistema_operacional": m["sistema_operacional"],
                         "processador": m["processador"],
@@ -667,6 +686,7 @@ def inventario(request):
                 "off": len([m for m in maquinas_para_salvar if m["status"] == "OFF"]),
                 "lista_off": [m["nome"] for m in maquinas_para_salvar if m["status"] == "OFF"],
                 "maquinas_json": maquinas_json,
+                "projetos": projetos,
             })
 
     # GET - mostrar dados já salvos
@@ -697,6 +717,7 @@ def inventario(request):
         "off": maquinas_db.filter(status="OFF").count(),
         "lista_off": maquinas_db.filter(status="OFF").values_list("nome", flat=True),
         "maquinas_json": json.dumps(maquinas),
+        "projetos":projetos,
     })
 
 @login_required(login_url='login')
@@ -883,39 +904,63 @@ def maquinas_equipamentos_por_unidade(request):
     else:
         unidades = Unidade.objects.order_by('nome')
 
-    # Base queryset
-    maquinas = Maquina.objects.all()
-    equipamentos = Equipamento.objects.all()
+    # --- Base QuerySets ---
+    maquinas_qs = Maquina.objects.select_related('unidade_associada').all()
+    equipamentos_qs = Equipamento.objects.select_related('unidade').all()
 
-    # Aplicando filtros
+    # --- Aplicando filtros diretamente no queryset ---
     if projeto_id:
-        maquinas = maquinas.filter(unidade_associada__projeto_id=projeto_id)
-        equipamentos = equipamentos.filter(unidade__projeto_id=projeto_id)
+        maquinas_qs = maquinas_qs.filter(unidade_associada__projeto_id=projeto_id)
+        equipamentos_qs = equipamentos_qs.filter(unidade__projeto_id=projeto_id)
     if unidade_id:
-        maquinas = maquinas.filter(unidade_associada_id=unidade_id)
-        equipamentos = equipamentos.filter(unidade_id=unidade_id)
+        maquinas_qs = maquinas_qs.filter(unidade_associada_id=unidade_id)
+        equipamentos_qs = equipamentos_qs.filter(unidade_id=unidade_id)
     if status_maquina:
-        maquinas = maquinas.filter(status=status_maquina)
+        maquinas_qs = maquinas_qs.filter(status=status_maquina)
     if fornecedor_associado:
-        maquinas = maquinas.filter(fornecedor_associado=fornecedor_associado)
+        maquinas_qs = maquinas_qs.filter(fornecedor_associado=fornecedor_associado)
     if tipo_equipamento:
-        equipamentos = equipamentos.filter(nome=tipo_equipamento)
+        equipamentos_qs = equipamentos_qs.filter(nome=tipo_equipamento)
     if tempo_off_min:
         try:
             tempo_off_min_val = int(tempo_off_min)
-            maquinas = maquinas.filter(tempo_off_dias__gte=tempo_off_min_val)
+            maquinas_qs = maquinas_qs.filter(tempo_off_dias__gte=tempo_off_min_val)
         except ValueError:
             pass
 
+    # --- Pré-carrega associações de máquinas ---
+    associacoes = list(UnidadeAssociacao.objects.select_related('unidade').all())
+    associacoes_dict = {a.prefixo_nome: a.unidade for a in associacoes}
+
+    # --- Atualiza máquinas em memória ---
+    maquinas = list(maquinas_qs)  # converte após filtros
+    maquinas_para_atualizar = []
+    for m in maquinas:
+        unidade_encontrada = None
+        for i in range(len(m.nome), 0, -1):
+            prefixo = m.nome[:i]
+            if prefixo in associacoes_dict:
+                unidade_encontrada = associacoes_dict[prefixo]
+                break
+        if unidade_encontrada and m.unidade_associada != unidade_encontrada:
+            m.unidade_associada = unidade_encontrada
+            maquinas_para_atualizar.append(m)
+
+    # Atualiza todas de uma vez
+    if maquinas_para_atualizar:
+        Maquina.objects.bulk_update(maquinas_para_atualizar, ['unidade_associada'])
+
     # Ordenação e atributos extras
-    maquinas = list(maquinas.order_by('unidade_associada__nome', 'nome'))
+    maquinas.sort(key=lambda x: (x.unidade_associada.nome if x.unidade_associada else '', x.nome))
     for m in maquinas:
         m.unidade_associada_display = m.unidade_associada or ''
         m.memoria_total_display = f"{int(m.memoria_total)},0" if m.memoria_total and m.memoria_total >= 1 else '-'
         m.fornecedor_associado_display = m.fornecedor_associado if m.fornecedor_associado else '-'
 
-    equipamentos = equipamentos.order_by('unidade__nome', 'nome')
+    # Equipamentos filtrados e ordenados
+    equipamentos = list(equipamentos_qs.order_by('unidade__nome', 'nome'))
 
+    # Fornecedores
     fornecedores = (
         Maquina.objects
         .exclude(fornecedor_associado__isnull=True)
@@ -940,6 +985,7 @@ def maquinas_equipamentos_por_unidade(request):
             'fornecedor_associado': fornecedor_associado or '',
         }
     })
+
 
 @login_required(login_url='login')
 def exportar_maquinas_excel(request):

@@ -13,7 +13,7 @@ class Projeto(models.Model):
 
 
 class Unidade(models.Model):
-    nome = models.CharField(max_length=100, unique=True)
+    nome = models.CharField(max_length=100)
     projeto = models.ForeignKey(Projeto, on_delete=models.CASCADE, related_name='unidades')
 
     def __str__(self):
