@@ -1,0 +1,51 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<h5 class="mb-3">Quantidade de Máquinas por Unidade</h5>
+
+<form method="get" class="mb-4">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-4">
+      <label for="projeto" class="form-label">Projeto</label><br>
+      <small>
+        <select name="projeto" id="projeto" class="form-select" onchange="this.form.submit()">
+          <option value="">-- Selecione --</option>
+          {% for projeto in projetos %}
+            <option value="{{ projeto.id }}" {% if projeto.id|stringformat:"s" == projeto_id %}selected{% endif %}>
+              {{ projeto.nome }}
+            </option>
+          {% endfor %}
+        </select>
+      </small>
+    </div>
+  </div>
+</form>
+
+{% if unidades_data %}
+  <table class="table table-bordered table-striped table-sm" style="width: auto;">
+    <thead class="table-light">
+      <tr>
+        <th nowrap>Unidade</th>
+        <th nowrap>Quantidade</th>
+        <th nowrap>Painéis</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in unidades_data %}
+      <tr>
+        <td nowrap>{{ item.unidade }}</td>
+        <td nowrap align="center">{{ item.total_pcs }}</td>
+        <td nowrap align="center">{{ item.total_paineis }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="fw-bold table-secondary">
+        <td nowrap>Total geral</td>
+        <td nowrap align="center">{{ total_geral_pcs }}</td>
+        <td nowrap align="center">{{ total_geral_paineis }}</td>
+      </tr>
+    </tbody>
+  </table>
+{% elif projeto_id %}
+  <div class="alert alert-info">Nenhuma unidade encontrada para este projeto.</div>
+{% endif %}
+{% endblock %}

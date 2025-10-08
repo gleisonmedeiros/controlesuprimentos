@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from .forms import LoginForm
-
+from django.db.models import Q
 import json
 
 from datetime import timedelta, datetime
@@ -1070,3 +1070,37 @@ def exportar_maquinas_excel(request):
     response["Content-Disposition"] = 'attachment; filename="maquinas_equipamentos.xlsx"'
     wb.save(response)
     return response
+
+############### CONSOLIDADO ######################
+
+def relatorio_maquinas_por_projeto(request):
+    projetos = Projeto.objects.all().order_by('nome')
+    projeto_id = request.GET.get('projeto')
+    unidades_data = []
+    total_geral_pcs = 0
+    total_geral_paineis = 0
+
+    if projeto_id:
+        unidades = Unidade.objects.filter(projeto_id=projeto_id)
+        for unidade in unidades:
+            total_pcs = unidade.maquinas_associadas.filter(~Q(nome__icontains='painel')).count()
+            total_paineis = unidade.maquinas_associadas.filter(nome__icontains='painel').count()
+
+            unidades_data.append({
+                'unidade': unidade.nome,
+                'total_pcs': total_pcs,
+                'total_paineis': total_paineis
+            })
+
+            total_geral_pcs += total_pcs
+            total_geral_paineis += total_paineis
+
+    context = {
+        'projetos': projetos,
+        'projeto_id': projeto_id,
+        'unidades_data': unidades_data,
+        'total_geral_pcs': total_geral_pcs,
+        'total_geral_paineis': total_geral_paineis,
+    }
+    return render(request, 'quantidade_maquina_por_unidade.html', context)
+
