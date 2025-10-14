@@ -993,6 +993,19 @@ def maquinas_equipamentos_por_unidade(request):
     # Equipamentos filtrados e ordenados
     equipamentos = list(equipamentos_qs.order_by('unidade__nome', 'nome'))
 
+    # Preenche o tipo dos equipamentos com base no cadastro
+    cadastros = {ec.nome: ec.tipo for ec in EquipamentoCadastro.objects.all()}
+    equipamentos_para_salvar = []
+
+    for e in equipamentos:
+        if not e.tipo and e.nome in cadastros:
+            e.tipo = cadastros[e.nome]
+            equipamentos_para_salvar.append(e)
+
+    # Atualiza no banco, se desejar salvar os tipos
+    if equipamentos_para_salvar:
+        Equipamento.objects.bulk_update(equipamentos_para_salvar, ['tipo'])
+
     # Fornecedores
     fornecedores = (
         Maquina.objects
@@ -1018,6 +1031,7 @@ def maquinas_equipamentos_por_unidade(request):
             'fornecedor_associado': fornecedor_associado or '',
         }
     })
+
 
 
 @login_required(login_url='login')
