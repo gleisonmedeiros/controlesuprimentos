@@ -2,10 +2,10 @@
 import openpyxl
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
-from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm
+from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm,EquipamentoCadastroForm
 from django.contrib import messages
-from .models import Equipamento, EntregaSuprimento, Suprimento, Projeto, Unidade, UnidadeAssociacao, ModeloFornecedor, Maquina
-from .forms import EquipamentoForm, ModeloFornecedorForm, UnidadeAssociacaoForm
+from .models import Equipamento, EntregaSuprimento, Suprimento, Projeto, Unidade, UnidadeAssociacao, ModeloFornecedor, Maquina,ConsolidadoMaquinas,EquipamentoCadastro
+from .forms import EquipamentoForm, ModeloFornecedorForm, UnidadeAssociacaoForm,ConsolidadoMaquinasForm
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -49,6 +49,38 @@ def iterando_erro(form):
         for error in error_list:
             errors.append(f"{error}")
     return errors
+
+@login_required(login_url='login')
+def cadastrar_equipamento(request, equipamento_id=None):
+    if equipamento_id:
+        equipamento = get_object_or_404(EquipamentoCadastro, pk=equipamento_id)
+    else:
+        equipamento = None
+
+    if request.method == 'POST':
+        # Exclusão
+        if 'delete' in request.POST:
+            equipamento_del = get_object_or_404(EquipamentoCadastro, pk=request.POST.get('delete'))
+            equipamento_del.delete()
+            messages.success(request, 'Equipamento excluído com sucesso!')
+            return redirect('cadastro_equipamento')
+
+        # Cadastro ou edição
+        form = EquipamentoCadastroForm(request.POST, instance=equipamento)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Equipamento salvo com sucesso!')
+            return redirect('cadastrar_equipamento')
+    else:
+        form = EquipamentoCadastroForm(instance=equipamento)
+
+    equipamentos = EquipamentoCadastro.objects.all().order_by('nome')
+
+    return render(request, 'cadastrar_equipamento.html', {
+        'form': form,
+        'equipamentos': equipamentos,
+        'equipamento_id': equipamento_id,
+    })
 
 id = 0
 @login_required(login_url='login')
@@ -720,10 +752,14 @@ def inventario(request):
         "projetos":projetos,
     })
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Projeto, Unidade, Equipamento, EquipamentoCadastro
+from .forms import EquipamentoForm
+
 @login_required(login_url='login')
 def cadastro_equipamento(request, equipamento_id=None):
     projetos = Projeto.objects.all()
-    tipos = Equipamento.NOME_CHOICES
 
     selected_projeto = request.POST.get('projeto', '') if request.method == 'POST' else ''
     selected_unidade = request.POST.get('unidade', '') if request.method == 'POST' else ''
@@ -731,13 +767,11 @@ def cadastro_equipamento(request, equipamento_id=None):
     equipamento_instance = None
     if equipamento_id:
         equipamento_instance = get_object_or_404(Equipamento, id=equipamento_id)
-        # Se não veio do POST, carrega do equipamento
         if not selected_projeto:
             selected_projeto = str(equipamento_instance.unidade.projeto.id)
         if not selected_unidade:
             selected_unidade = str(equipamento_instance.unidade.id)
 
-    # Filtra unidades conforme o projeto
     if selected_projeto:
         unidades = Unidade.objects.filter(projeto_id=selected_projeto).order_by("nome")
     else:
@@ -748,21 +782,20 @@ def cadastro_equipamento(request, equipamento_id=None):
         if form.is_valid():
             form.save()
             return redirect('cadastro_equipamento')
-        else:
-            print("Form inválido. Erros:", form.errors)
     else:
         form = EquipamentoForm(instance=equipamento_instance)
 
     equipamentos = Equipamento.objects.select_related('unidade').order_by('unidade__nome', 'patrimonio')
+    equipamentos_cadastro = EquipamentoCadastro.objects.all().order_by('nome')  # Para popular o select
 
     return render(request, 'cadastro_equipamento.html', {
         'projetos': projetos,
         'unidades': unidades,
-        'tipos': tipos,
         'form': form,
         'selected_projeto': selected_projeto,
         'selected_unidade': selected_unidade,
         'equipamentos': equipamentos,
+        'equipamentos_cadastro': equipamentos_cadastro,
         'equipamento_id': equipamento_id,
     })
 
@@ -1055,7 +1088,7 @@ def exportar_maquinas_excel(request):
     for e in equipamentos:
         ws2.append([
             str(e.unidade),
-            e.get_nome_display(),
+            e.nome,
             e.setor,
             e.tipo,
             e.patrimonio,
@@ -1073,34 +1106,110 @@ def exportar_maquinas_excel(request):
 
 ############### CONSOLIDADO ######################
 
+from django.db.models import Q
+from django.shortcuts import render
+from .models import Projeto, Unidade, ConsolidadoMaquinas
+
+@login_required(login_url='login')
 def relatorio_maquinas_por_projeto(request):
     projetos = Projeto.objects.all().order_by('nome')
     projeto_id = request.GET.get('projeto')
     unidades_data = []
-    total_geral_pcs = 0
+    total_geral_prevista = 0
+    total_geral_atual = 0
     total_geral_paineis = 0
 
     if projeto_id:
         unidades = Unidade.objects.filter(projeto_id=projeto_id)
         for unidade in unidades:
-            total_pcs = unidade.maquinas_associadas.filter(~Q(nome__icontains='painel')).count()
+            # Qtd atual de PCs (não painel)
+            qtd_atual = unidade.maquinas_associadas.filter(~Q(nome__icontains='painel')).count()
+            # Qtd de painéis
             total_paineis = unidade.maquinas_associadas.filter(nome__icontains='painel').count()
+            # Qtd prevista do consolidado
+            consolidado = ConsolidadoMaquinas.objects.filter(projeto_id=projeto_id, unidade=unidade).first()
+            qtd_prevista = consolidado.quantidade if consolidado else 0
 
             unidades_data.append({
                 'unidade': unidade.nome,
-                'total_pcs': total_pcs,
+                'qtd_prevista': qtd_prevista,
+                'qtd_atual': qtd_atual,
                 'total_paineis': total_paineis
             })
 
-            total_geral_pcs += total_pcs
+            total_geral_prevista += qtd_prevista
+            total_geral_atual += qtd_atual
             total_geral_paineis += total_paineis
 
     context = {
         'projetos': projetos,
         'projeto_id': projeto_id,
         'unidades_data': unidades_data,
-        'total_geral_pcs': total_geral_pcs,
+        'total_geral_prevista': total_geral_prevista,
+        'total_geral_atual': total_geral_atual,
         'total_geral_paineis': total_geral_paineis,
     }
     return render(request, 'quantidade_maquina_por_unidade.html', context)
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from .models import ConsolidadoMaquinas, Projeto, Unidade
+from .forms import ConsolidadoMaquinasForm
+
+@login_required(login_url='login')
+def consolidado_maquinas(request):
+    # Todos os registros para listagem
+    queryset = ConsolidadoMaquinas.objects.select_related('projeto', 'unidade').order_by('projeto', 'unidade')
+
+    # ID de edição
+    edit_id = request.POST.get('edit') or request.GET.get('edit')
+    obj = ConsolidadoMaquinas.objects.filter(id=edit_id).first() if edit_id else None
+
+    # Lista de projetos para select
+    projetos = Projeto.objects.all().order_by('nome')
+
+    # Projeto selecionado (GET ou POST)
+    selected_projeto = request.POST.get('projeto') or request.GET.get('projeto')
+
+    # Lista de unidades filtradas pelo projeto (sempre queryset, nunca lista)
+    if selected_projeto:
+        unidades = Unidade.objects.filter(projeto_id=selected_projeto).order_by('nome')
+    else:
+        unidades = Unidade.objects.none()
+
+    # Unidade selecionada (para manter a seleção)
+    selected_unidade = request.POST.get('unidade') or (str(obj.unidade.id) if obj else '')
+
+    if request.method == 'POST':
+        # Exclusão
+        if 'delete' in request.POST:
+            obj_del = get_object_or_404(ConsolidadoMaquinas, pk=request.POST.get('delete'))
+            obj_del.delete()
+            messages.success(request, 'Registro removido com sucesso!')
+            return redirect('consolidado_maquinas')
+
+        # Criação ou edição
+        form = ConsolidadoMaquinasForm(request.POST, instance=obj)
+        form.fields['unidade'].queryset = unidades  # garante queryset válido
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Registro {"atualizado" if obj else "criado"} com sucesso!')
+            return redirect('consolidado_maquinas')
+    else:
+        # GET
+        form = ConsolidadoMaquinasForm(instance=obj)
+        form.fields['unidade'].queryset = unidades
+
+    return render(request, 'consolidado_maquinas.html', {
+        'form': form,
+        'queryset': queryset,
+        'edit_obj': obj,
+        'projetos': projetos,
+        'unidades': unidades,
+        'selected_projeto': selected_projeto,
+        'selected_unidade': selected_unidade,
+    })
+
 

@@ -22,29 +22,67 @@
 </form>
 
 {% if unidades_data %}
-  <table class="table table-bordered table-striped table-sm" style="width: auto;">
-    <thead class="table-light">
-      <tr>
-        <th nowrap>Unidade</th>
-        <th nowrap>Quantidade</th>
-        <th nowrap>Painéis</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in unidades_data %}
-      <tr>
-        <td nowrap>{{ item.unidade }}</td>
-        <td nowrap align="center">{{ item.total_pcs }}</td>
-        <td nowrap align="center">{{ item.total_paineis }}</td>
-      </tr>
-      {% endfor %}
-      <tr class="fw-bold table-secondary">
-        <td nowrap>Total geral</td>
-        <td nowrap align="center">{{ total_geral_pcs }}</td>
-        <td nowrap align="center">{{ total_geral_paineis }}</td>
-      </tr>
-    </tbody>
-  </table>
+<div class="d-flex gap-3">
+
+  <!-- Tabela 1: Unidade | QTD Prevista -->
+  <div>
+    <h6>Tabela 1: Unidade e QTD Prevista</h6>
+    <table class="table table-bordered table-striped table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th nowrap>Unidade</th>
+          <th nowrap>QTD Prevista</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in unidades_data %}
+        <tr>
+          <td nowrap>{{ item.unidade }}</td>
+          <td nowrap align="center">{{ item.qtd_prevista }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="fw-bold table-secondary">
+          <td nowrap>Total geral</td>
+          <td nowrap align="center">{{ total_geral_prevista }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tabela 2: QTD Atual | Painéis -->
+  <div>
+    <h6>Tabela 2: QTD Atual e Painéis</h6>
+    <table class="table table-bordered table-striped table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th nowrap>QTD Atual</th>
+          <th nowrap>Painéis</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in unidades_data %}
+        <tr
+          {% if item.qtd_atual == item.qtd_prevista %}
+            class="table-success"
+          {% elif item.qtd_atual < item.qtd_prevista %}
+            class="table-danger"
+          {% else %}
+            class="table-warning"
+          {% endif %}
+        >
+          <td nowrap align="center">{{ item.qtd_atual }}</td>
+          <td nowrap align="center">{{ item.total_paineis }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="fw-bold table-secondary">
+          <td nowrap align="center">{{ total_geral_atual }}</td>
+          <td nowrap align="center">{{ total_geral_paineis }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
 {% elif projeto_id %}
   <div class="alert alert-info">Nenhuma unidade encontrada para este projeto.</div>
 {% endif %}

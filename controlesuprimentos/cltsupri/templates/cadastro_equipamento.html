@@ -3,128 +3,117 @@
 {% block content %}
 <h5>{% if equipamento_id %}Editar Equipamento{% else %}Cadastro de Equipamento{% endif %}</h5>
 
-<form method="POST" id="form-cadastro-equipamento" class="mb-4">
-  {% csrf_token %}
+<form method="POST" class="mb-4">
+    {% csrf_token %}
 
-  <div class="row">
-    <!-- Projeto -->
-    <div class="col-md-4 mb-3">
-      <label for="id_projeto">Projeto</label>
-      <select name="projeto" id="id_projeto" class="form-control">
-        <option value="">Selecione um Projeto</option>
-        {% for projeto in projetos %}
-          <option value="{{ projeto.id }}" {% if projeto.id|stringformat:"s" == selected_projeto %}selected{% endif %}>{{ projeto.nome }}</option>
-        {% endfor %}
-      </select>
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label for="id_projeto">Projeto</label>
+            <select name="projeto" id="id_projeto" class="form-control">
+                <option value="">Selecione um Projeto</option>
+                {% for projeto in projetos %}
+                    <option value="{{ projeto.id }}" {% if selected_projeto == projeto.id|stringformat:"s" %}selected{% endif %}>
+                        {{ projeto.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label for="id_unidade">Unidade</label>
+            <select name="unidade" id="id_unidade" class="form-control">
+                <option value="">Selecione uma Unidade</option>
+                {% for unidade in unidades %}
+                    <option value="{{ unidade.id }}" {% if selected_unidade == unidade.id|stringformat:"s" %}selected{% endif %}>
+                        {{ unidade.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label for="id_setor">Setor</label>
+            <input type="text" name="setor" id="id_setor" class="form-control" value="{{ form.setor.value|default_if_none:'' }}">
+        </div>
     </div>
 
-    <!-- Unidade -->
-    <div class="col-md-4 mb-3">
-      <label for="id_unidade">Unidade</label>
-      <select name="unidade" id="id_unidade" class="form-control">
-        <option value="">Selecione uma Unidade</option>
-        {% for unidade in unidades %}
-          <option value="{{ unidade.id }}" {% if unidade.id|stringformat:"s" == selected_unidade %}selected{% endif %}>{{ unidade.nome }}</option>
-        {% endfor %}
-      </select>
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label for="id_patrimonio">Patrimônio</label>
+            <input type="text" name="patrimonio" id="id_patrimonio" class="form-control" value="{{ form.patrimonio.value|default_if_none:'' }}">
+        </div>
+
+        <div class="col-md-4">
+            <label for="id_marca">Marca</label>
+            <input type="text" name="marca" id="id_marca" class="form-control" value="{{ form.marca.value|default_if_none:'' }}">
+        </div>
+
+        <div class="col-md-4">
+            <label for="id_modelo">Modelo</label>
+            <input type="text" name="modelo" id="id_modelo" class="form-control" value="{{ form.modelo.value|default_if_none:'' }}">
+        </div>
     </div>
 
-    <!-- Setor (CharField) -->
-    <div class="col-md-4 mb-3">
-      <label for="id_setor">Setor</label>
-      <input type="text" name="setor" id="id_setor" class="form-control" value="{{ form.setor.value|default_if_none:'' }}">
-    </div>
-  </div>
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label for="id_nome">Nome</label>
+            <select name="nome" id="id_nome" class="form-control">
+                <option value="">Selecione o Nome</option>
+                {% for eq in equipamentos_cadastro %}
+                    <option value="{{ eq.nome }}" {% if form.nome.value == eq.nome %}selected{% endif %}>
+                        {{ eq.nome }}{% if eq.tipo %} ({{ eq.tipo }}){% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
 
-  <div class="row">
-    <!-- Patrimônio -->
-    <div class="col-md-4 mb-3">
-      <label for="id_patrimonio">Patrimônio</label>
-      <input type="text" name="patrimonio" id="id_patrimonio" class="form-control" value="{{ form.patrimonio.value|default_if_none:'' }}">
-    </div>
-
-    <!-- Marca -->
-    <div class="col-md-4 mb-3">
-      <label for="id_marca">Marca</label>
-      <input type="text" name="marca" id="id_marca" class="form-control" value="{{ form.marca.value|default_if_none:'' }}">
+        <!-- Tipo oculto -->
+        <input type="hidden" name="tipo" id="id_tipo" value="{{ form.tipo.value|default_if_none:'' }}">
     </div>
 
-    <!-- Modelo -->
-    <div class="col-md-4 mb-3">
-      <label for="id_modelo">Modelo</label>
-      <input type="text" name="modelo" id="id_modelo" class="form-control" value="{{ form.modelo.value|default_if_none:'' }}">
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">{% if equipamento_id %}Salvar Alterações{% else %}Cadastrar Equipamento{% endif %}</button>
+        {% if equipamento_id %}
+            <a href="{% url 'cadastro_equipamento' %}" class="btn btn-secondary">Cancelar Edição</a>
+        {% endif %}
     </div>
-  </div>
-
-  <div class="row">
-    <!-- Nome -->
-    <div class="col-md-4 mb-3">
-      <label for="id_nome">Nome</label>
-      <select name="nome" id="id_nome" class="form-control">
-        <option value="">Selecione o Nome</option>
-        {% for chave, valor in tipos %}
-          <option value="{{ chave }}" {% if form.nome.value == chave %}selected{% endif %}>{{ valor }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <!-- Tipo (opcional) -->
-    <div class="col-md-4 mb-3">
-      <label for="id_tipo">Tipo (opcional)</label>
-      <input type="text" name="tipo" id="id_tipo" class="form-control" value="{{ form.tipo.value|default_if_none:'' }}">
-    </div>
-
-    <!-- Espaço -->
-    <div class="col-md-4 mb-3"></div>
-  </div>
-
-  <div class="d-flex gap-2">
-    <button type="submit" class="btn btn-primary">{% if equipamento_id %}Salvar Alterações{% else %}Cadastrar Equipamento{% endif %}</button>
-    {% if equipamento_id %}
-      <a href="{% url 'cadastro_equipamento' %}" class="btn btn-secondary">Cancelar Edição</a>
-    {% endif %}
-  </div>
 </form>
 
-<!-- Listagem -->
 <h5>Equipamentos cadastrados</h5>
 <table class="table table-striped">
-  <thead class="table-dark">
-    <tr>
-      <th>Projeto</th>
-      <th>Unidade</th>
-      <th>Setor</th>
-      <th>Nome</th>
-      <th>Patrimônio</th>
-      <th>Marca</th>
-      <th>Modelo</th>
-      <th>Tipo</th>
-      <th>Ações</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for equipamento in equipamentos %}
-      <tr>
-        <td>{{ equipamento.unidade.projeto.nome }}</td>
-        <td>{{ equipamento.unidade.nome }}</td>
-        <td>{{ equipamento.setor }}</td>
-        <td>{{ equipamento.get_nome_display }}</td>
-        <td>{{ equipamento.patrimonio }}</td>
-        <td>{{ equipamento.marca }}</td>
-        <td>{{ equipamento.modelo }}</td>
-        <td>{{ equipamento.tipo }}</td>
-        <td>
-          <a href="{% url 'cadastro_equipamento_editar' equipamento.id %}" class="btn btn-sm btn-warning">Editar</a>
-        </td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="9">Nenhum equipamento cadastrado.</td></tr>
-    {% endfor %}
-  </tbody>
+    <thead class="table-dark">
+        <tr>
+            <th>Projeto</th>
+            <th>Unidade</th>
+            <th>Setor</th>
+            <th>Nome</th>
+            <th>Patrimônio</th>
+            <th>Marca</th>
+            <th>Modelo</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for equipamento in equipamentos %}
+            <tr>
+                <td>{{ equipamento.unidade.projeto.nome }}</td>
+                <td>{{ equipamento.unidade.nome }}</td>
+                <td>{{ equipamento.setor }}</td>
+                <td>{{ equipamento.nome }}</td>
+                <td>{{ equipamento.patrimonio }}</td>
+                <td>{{ equipamento.marca }}</td>
+                <td>{{ equipamento.modelo }}</td>
+                <td>
+                    <a href="{% url 'cadastro_equipamento_editar' equipamento.id %}" class="btn btn-sm btn-warning">Editar</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="8">Nenhum equipamento cadastrado.</td></tr>
+        {% endfor %}
+    </tbody>
 </table>
 
 <script>
-  // Atualiza unidades ao trocar o projeto
   document.getElementById('id_projeto').addEventListener('change', function() {
     this.form.submit();
   });

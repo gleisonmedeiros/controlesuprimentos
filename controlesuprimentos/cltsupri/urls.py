@@ -39,4 +39,7 @@ urlpatterns = [
          name='modelo-fornecedor-delete'),
     path("maquinas/exportar/", views.exportar_maquinas_excel, name="exportar_maquinas_excel"),
     path('quantidade-maquina-por-unidade/', views.relatorio_maquinas_por_projeto, name='quantidade_maquina_por_unidade'),
+    path('consolidado_maquinas/', views.consolidado_maquinas, name='consolidado_maquinas'),
+    path('equipamento/', views.cadastrar_equipamento, name='cadastrar_equipamento'),
+    path('equipamento/<int:equipamento_id>/', views.cadastrar_equipamento, name='cadastrar_equipamento_editar'),
 ]

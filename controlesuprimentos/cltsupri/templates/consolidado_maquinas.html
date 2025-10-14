@@ -1,0 +1,93 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h5>{% if edit_obj %}Editar Registro{% else %}Cadastro de Consolidados{% endif %}</h5>
+
+    <form method="post" id="form-consolidado" class="mb-4">
+        {% csrf_token %}
+
+        {% if edit_obj %}
+            <input type="hidden" name="edit" value="{{ edit_obj.id }}">
+        {% endif %}
+
+        <div class="row">
+            <!-- Projeto -->
+            <div class="col-md-6 mb-3">
+                <label for="id_projeto">Projeto</label>
+                <select name="projeto" id="id_projeto" class="form-control">
+                    <option value="">Selecione um Projeto</option>
+                    {% for projeto in projetos %}
+                        <option value="{{ projeto.id }}" {% if projeto.id|stringformat:"s" == selected_projeto %}selected{% endif %}>{{ projeto.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Unidade -->
+            <div class="col-md-6 mb-3">
+                <label for="id_unidade">Unidade</label>
+                <select name="unidade" id="id_unidade" class="form-control">
+                    <option value="">Selecione uma Unidade</option>
+                    {% for unidade in unidades %}
+                        <option value="{{ unidade.id }}" {% if unidade.id|stringformat:"s" == selected_unidade %}selected{% endif %}>{{ unidade.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Quantidade -->
+        <div class="mb-3">
+            <label for="id_quantidade">Quantidade</label>
+            {{ form.quantidade }}
+            {% for error in form.quantidade.errors %}
+                <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">{% if edit_obj %}Salvar Alterações{% else %}Cadastrar{% endif %}</button>
+        {% if edit_obj %}
+            <a href="{% url 'consolidado_maquinas' %}" class="btn btn-secondary">Cancelar Edição</a>
+        {% endif %}
+    </form>
+
+    <h5>Consolidados Cadastrados</h5>
+    <table class="table table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Projeto</th>
+                <th>Unidade</th>
+                <th class="text-center">Quantidade</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in queryset %}
+                <tr>
+                    <td>{{ item.projeto.nome }}</td>
+                    <td>{{ item.unidade.nome }}</td>
+                    <td class="text-center">{{ item.quantidade }}</td>
+                    <td>
+                        <a href="?edit={{ item.id }}" class="btn btn-sm btn-warning">Editar</a>
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="delete" value="{{ item.id }}">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Deseja realmente excluir este registro?')">Excluir</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted">Nenhum registro encontrado.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Atualiza unidades ao trocar o projeto
+    document.getElementById('id_projeto').addEventListener('change', function() {
+        document.getElementById('form-consolidado').submit();
+    });
+</script>
+{% endblock %}

@@ -1,8 +1,34 @@
 from django import forms
-from .models import Unidade, Suprimento, EntregaSuprimento, Projeto, Equipamento, UnidadeAssociacao, ModeloFornecedor, Maquina
+from .models import (Unidade,
+                     Suprimento,
+                     EntregaSuprimento,
+                     Projeto,
+                     Equipamento,
+                     UnidadeAssociacao,
+                     ModeloFornecedor,
+                     Maquina,
+                     ConsolidadoMaquinas,
+                     EquipamentoCadastro)
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+
+class EquipamentoCadastroForm(forms.ModelForm):
+    class Meta:
+        model = EquipamentoCadastro
+        fields = ['nome', 'tipo']
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control'}),
+            'tipo': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+class ConsolidadoMaquinasForm(forms.ModelForm):
+    class Meta:
+        model = ConsolidadoMaquinas
+        fields = ['projeto', 'unidade', 'quantidade']
+        widgets = {
+            'quantidade': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+        }
 
 class LoginForm(AuthenticationForm):
     username = forms.CharField(
@@ -53,7 +79,9 @@ class UnidadeAssociacaoForm(forms.ModelForm):
 class EquipamentoForm(forms.ModelForm):
     class Meta:
         model = Equipamento
-        fields = ['unidade', 'setor','nome', 'patrimonio', 'marca', 'modelo', 'tipo']
+        fields = ['unidade', 'setor', 'patrimonio', 'marca', 'modelo', 'nome', 'tipo']
+
+    nome = forms.CharField(max_length=100)  # Sem choices
 
 class ProjetoForm(forms.ModelForm):
     class Meta:

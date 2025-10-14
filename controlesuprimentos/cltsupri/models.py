@@ -11,6 +11,13 @@ class Projeto(models.Model):
     def __str__(self):
         return self.nome
 
+class EquipamentoCadastro(models.Model):
+    nome = models.CharField(max_length=100, unique=True)
+    tipo = models.CharField(max_length=100, blank=True)
+
+    def __str__(self):
+        return f"{self.nome} - ({self.tipo})"
+
 
 class Unidade(models.Model):
     nome = models.CharField(max_length=100)
@@ -37,23 +44,20 @@ class EntregaSuprimento(models.Model):
         return f"{self.unidade.nome} - {self.suprimento.nome} - {self.quantidade_entregue} - {self.data}"
 
 class Equipamento(models.Model):
-    NOME_CHOICES = [
-        ('impressora', 'Impressora'),
-        ('tv', 'TV'),
-        ('outro', 'Outro'),
-    ]
-
     unidade = models.ForeignKey(
         Unidade,
         on_delete=models.CASCADE,
         related_name='equipamentos'
     )
-    nome = models.CharField(max_length=50, choices=NOME_CHOICES, default='impressora')
-    tipo = models.CharField(max_length=100, blank=True)  # campo editável, opcional
+    nome = models.CharField(max_length=100)  # removeu choices
+    tipo = models.CharField(max_length=100, blank=True)
     patrimonio = models.CharField(max_length=50)
     marca = models.CharField(max_length=100)
     modelo = models.CharField(max_length=100)
-    setor = models.CharField(max_length=100,blank=True)
+    setor = models.CharField(max_length=100, blank=True)
+
+    def __str__(self):
+        return f"{self.nome} - ({self.tipo})"
 
     def __str__(self):
         tipo_exibido = self.tipo if self.tipo else self.get_nome_display()
@@ -97,3 +101,26 @@ class ModeloFornecedor(models.Model):
 
     class Meta:
         unique_together = ('modelo', 'fornecedor')  # modelo+fornecedor únicos
+
+
+class ConsolidadoMaquinas(models.Model):
+    projeto = models.ForeignKey(
+        'Projeto',
+        on_delete=models.PROTECT,
+        related_name='consolidados_maquinas'
+    )
+    unidade = models.ForeignKey(
+        'Unidade',
+        on_delete=models.PROTECT,
+        related_name='consolidados_maquinas'
+    )
+    quantidade = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Consolidado de Máquinas'
+        verbose_name_plural = 'Consolidados de Máquinas'
+        unique_together = ('projeto', 'unidade')
+        ordering = ['projeto', 'unidade']
+
+    def __str__(self):
+        return f"{self.projeto} - {self.unidade}: {self.quantidade}"

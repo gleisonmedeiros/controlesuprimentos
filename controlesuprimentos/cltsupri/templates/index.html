@@ -23,6 +23,7 @@
             <li><a class="dropdown-item" href="{% url 'criar_projeto' %}">Projeto</a></li>
             <li><a class="dropdown-item" href="{% url 'criar_unidade' %}">Unidade</a></li>
             <li><a class="dropdown-item" href="{% url 'criar_suprimento' %}">Suprimento</a></li>
+            <li><a class="dropdown-item" href="{% url 'cadastrar_equipamento' %}">Equipamento</a></li>
             <li><a class="dropdown-item" href="{% url 'entrega_suprimento' %}">Entrega</a></li>
           </ul>
         </li>
@@ -62,6 +63,7 @@
           <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Consolidado</a>
           <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="{% url 'quantidade_maquina_por_unidade' %}">Relatório Geral</a></li>
+            <li><a class="dropdown-item" href="{% url 'consolidado_maquinas' %}">Cadastro maquinas</a></li>
           </ul>
         </li>
       </ul>
