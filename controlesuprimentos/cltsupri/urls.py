@@ -42,4 +42,5 @@ urlpatterns = [
     path('consolidado_maquinas/', views.consolidado_maquinas, name='consolidado_maquinas'),
     path('equipamento/', views.cadastrar_equipamento, name='cadastrar_equipamento'),
     path('equipamento/<int:equipamento_id>/', views.cadastrar_equipamento, name='cadastrar_equipamento_editar'),
+    path('consolidado-equipamentos/', views.consolidado_equipamentos, name='consolidado_equipamentos'),
 ]

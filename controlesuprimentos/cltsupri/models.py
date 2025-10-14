@@ -96,7 +96,7 @@ class ModeloFornecedor(models.Model):
         ('ECO', 'ECO'),
         ('DISTRICOMP', 'DISTRICOMP'),
     ]
-    modelo = models.CharField(max_length=100)  # nome do modelo 
+    modelo = models.CharField(max_length=100)  # nome do modelo
     fornecedor = models.CharField(max_length=50, choices=FORNECEDOR_CHOICES)
 
     class Meta:
@@ -124,3 +124,18 @@ class ConsolidadoMaquinas(models.Model):
 
     def __str__(self):
         return f"{self.projeto} - {self.unidade}: {self.quantidade}"
+
+class ConsolidadoEquipamento(models.Model):
+    projeto = models.ForeignKey(Projeto, on_delete=models.CASCADE, related_name='consolidados_equipamento')
+    unidade = models.ForeignKey(Unidade, on_delete=models.CASCADE, related_name='consolidados_equipamento')
+    equipamento = models.ForeignKey(EquipamentoCadastro, on_delete=models.CASCADE, related_name='consolidados')  # ou Equipamento, dependendo do uso
+    quantidade = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('projeto', 'unidade', 'equipamento')
+        verbose_name = 'Consolidado de Equipamento'
+        verbose_name_plural = 'Consolidados de Equipamentos'
+        ordering = ['projeto', 'unidade', 'equipamento']
+
+    def __str__(self):
+        return f"{self.projeto.nome} - {self.unidade.nome} - {self.equipamento.nome}: {self.quantidade}"

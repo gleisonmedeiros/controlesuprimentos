@@ -8,7 +8,8 @@ from .models import (Unidade,
                      ModeloFornecedor,
                      Maquina,
                      ConsolidadoMaquinas,
-                     EquipamentoCadastro)
+                     EquipamentoCadastro,
+                     ConsolidadoEquipamento)
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
@@ -20,6 +21,23 @@ class EquipamentoCadastroForm(forms.ModelForm):
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control'}),
             'tipo': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+class ConsolidadoEquipamentoForm(forms.ModelForm):
+    class Meta:
+        model = ConsolidadoEquipamento
+        fields = ['projeto', 'unidade', 'equipamento', 'quantidade']
+        widgets = {
+            'projeto': forms.Select(attrs={'class': 'form-control'}),
+            'unidade': forms.Select(attrs={'class': 'form-control'}),
+            'equipamento': forms.Select(attrs={'class': 'form-control'}),
+            'quantidade': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+        }
+        labels = {
+            'projeto': 'Projeto',
+            'unidade': 'Unidade',
+            'equipamento': 'Equipamento',
+            'quantidade': 'Quantidade',
         }
 
 class ConsolidadoMaquinasForm(forms.ModelForm):
