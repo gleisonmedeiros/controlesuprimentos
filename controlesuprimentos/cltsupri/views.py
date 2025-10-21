@@ -1,4 +1,4 @@
-
+from django.db.models import Sum
 import openpyxl
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
@@ -510,6 +510,49 @@ def pesquisa_entrega(request):
         'unidades': unidades,
         'suprimentos': suprimentos,
     })
+
+@login_required(login_url='login')
+def relatorio_toners(request):
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+    projeto_id = request.GET.get('projeto')
+    unidade_id = request.GET.get('unidade')
+
+    projetos = Projeto.objects.all()
+    unidades = Unidade.objects.all()
+
+    entregas = EntregaSuprimento.objects.all()
+
+    # Filtro por data
+    if data_inicio and data_fim:
+        entregas = entregas.filter(data__range=[data_inicio, data_fim])
+
+    # Filtro por projeto
+    if projeto_id:
+        entregas = entregas.filter(unidade__projeto_id=projeto_id)
+        unidades = unidades.filter(projeto_id=projeto_id)  # restringe unidades no select
+
+    # Filtro por unidade
+    if unidade_id:
+        entregas = entregas.filter(unidade_id=unidade_id)
+
+    # Agrupa por suprimento
+    entregas = (
+        entregas.values('suprimento__nome')
+        .annotate(total=Sum('quantidade_entregue'))
+        .order_by('suprimento__nome')
+    )
+
+    context = {
+        'entregas': entregas,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+        'projetos': projetos,
+        'unidades': unidades,
+        'projeto_id': projeto_id,
+        'unidade_id': unidade_id,
+    }
+    return render(request, 'relatorio_toners.html', context)
 
 #############################################
 
