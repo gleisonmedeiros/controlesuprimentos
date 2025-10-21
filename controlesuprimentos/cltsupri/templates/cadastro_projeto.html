@@ -1,32 +1,54 @@
-
-{% extends 'index.html' %}  <!-- Estende o template base, se houver -->
+{% extends 'index.html' %}
 
 {% block content %}
-<div class="container">
-    <h5>Criar Projeto</h5>
-    <form method="POST">
-        {% csrf_token %}
+<h5>{% if projeto_id %}Editar Projeto{% else %}Cadastro de Projeto{% endif %}</h5>
 
-        <!-- Exibe o campo 'nome' -->
-        <div class="form-group">
-            <label for="id_nome">Nome do Projeto:</label>
+<form method="POST" class="mb-4">
+    {% csrf_token %}
+    <div class="row mb-3">
+        <div class="col-md-6">
+            {{ form.nome.label_tag }}
             {{ form.nome }}
         </div>
-
-        <!-- Botão de enviar -->
-        <input name="save_projeto" type="submit" class="btn btn-primary" value="Salvar"></input>
-    </form>
-
-    {% for error in errors %}
-        {% if error == '0' %}
-            <div id="mensagem-alerta" class="alert alert-success" role="alert">
-                Projeto salvo com Sucesso
-            </div>
-        {% else %}
-            <div id="mensagem-alerta" class="alert alert-danger" role="alert">
-                {{ error  }}
-            </div>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            {% if projeto_id %}Salvar{% else %}Cadastrar{% endif %}
+        </button>
+        {% if projeto_id %}
+            <a href="{% url 'criar_projeto' %}" class="btn btn-secondary">Cancelar</a>
         {% endif %}
-    {% endfor %}
-</div>
+    </div>
+</form>
+
+{% for error in errors %}
+    <div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endfor %}
+
+<h5>Projetos Cadastrados</h5>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for proj in projetos %}
+            <tr>
+                <td>{{ proj.nome }}</td>
+                <td>
+                    <a href="{% url 'criar_projeto_editar' proj.id %}" class="btn btn-sm btn-warning">Editar</a>
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="delete" value="{{ proj.id }}">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Deseja realmente excluir este projeto?')">Excluir</button>
+                    </form>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="2">Nenhum projeto cadastrado.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}

@@ -188,110 +188,141 @@ def index(request):
 
     return render(request, 'index.html')
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from .models import Unidade
+from .forms import UnidadeForm
+
+# sem get_object_or_404, pois você prefere evitar
+
 @login_required(login_url='login')
-def criar_unidade(request):
+def criar_unidade(request, unidade_id=None):
+    # Se estiver editando
+    if unidade_id:
+        try:
+            unidade = Unidade.objects.get(id=unidade_id)
+        except Unidade.DoesNotExist:
+            unidade = None
+    else:
+        unidade = None
+
     if request.method == 'POST':
-        editar = request.session.get('editar', None)
-        unidade_id = request.session.get('unidade_id_novo', None)
+        # Excluir unidade
+        if 'delete' in request.POST:
+            Unidade.objects.filter(id=request.POST.get('delete')).delete()
+            return redirect('criar_unidade')
 
-        if editar == True and unidade_id is not None:
-            unidade = get_object_or_404(Unidade, id=unidade_id)
-            form = UnidadeForm(request.POST, instance=unidade)
-        else:
-            form = UnidadeForm(request.POST)
-
+        # Criar ou editar unidade
+        form = UnidadeForm(request.POST, instance=unidade)
         if form.is_valid():
             nome = form.cleaned_data.get('nome')
             projeto = form.cleaned_data.get('projeto')
 
-            # Apaga outra unidade com mesmo nome e projeto, exceto a atual
+            # Evita duplicação (mesmo nome e projeto)
             Unidade.objects.filter(nome=nome, projeto=projeto).exclude(id=unidade_id).delete()
 
             form.save()
-            form = UnidadeForm()
-            erro = ['0']
-            return render(request, 'cadastro_unidade.html', {'form': form, 'errors': erro})
+            return redirect('criar_unidade')
         else:
             erro = iterando_erro(form)
-            print(erro)
-            return render(request, 'cadastro_unidade.html', {'form': form, 'errors': erro})
+            return render(request, 'cadastro_unidade.html', {
+                'form': form,
+                'unidades': Unidade.objects.all(),
+                'errors': erro,
+                'unidade_id': unidade_id,
+            })
 
     else:
-        unidade_id = request.session.get('unidade_id', None)
-        request.session['unidade_id_novo'] = unidade_id
-        request.session['editar'] = False
+        form = UnidadeForm(instance=unidade)
 
-        if unidade_id is not None:
-            unidade = get_object_or_404(Unidade, id=unidade_id)
-            form = UnidadeForm(instance=unidade)
-            request.session['editar'] = True
-        else:
-            form = UnidadeForm()
+    unidades = Unidade.objects.all()
+    return render(request, 'cadastro_unidade.html', {
+        'form': form,
+        'unidades': unidades,
+        'unidade_id': unidade_id,
+        'errors': [],
+    })
 
-        print(request.session.get('editar', None))
-        print(unidade_id)
-        request.session.pop('unidade_id', None)
-
-    return render(request, 'cadastro_unidade.html', {'form': form})
 
 @login_required(login_url='login')
-def criar_suprimento(request):
+def criar_suprimento(request, suprimento_id=None):
+    # Detecta edição
+    if suprimento_id:
+        try:
+            suprimento = Suprimento.objects.get(id=suprimento_id)
+        except Suprimento.DoesNotExist:
+            suprimento = None
+    else:
+        suprimento = None
+
     if request.method == 'POST':
-        form = SuprimentoForm(request.POST)
+        # Excluir suprimento
+        if 'delete' in request.POST:
+            Suprimento.objects.filter(id=request.POST.get('delete')).delete()
+            return redirect('criar_suprimento')
+
+        # Criar ou editar suprimento
+        form = SuprimentoForm(request.POST, instance=suprimento)
         if form.is_valid():
-            print("funcionou")
-            #if 'save_unidade' in request.POST:
-            #    print("clicou")
-            editar = request.session.get('editar', None)
-            suprimento_id = request.session.get('suprimento_id_novo', None)
-            if (editar == True) and (suprimento_id != None):
-                suprimento = get_object_or_404(Suprimento, id=suprimento_id)
-                form = SuprimentoForm(request.POST, instance=suprimento)
-            form.save()  # Salva a nova unidade
-            form = SuprimentoForm()
-            erro = ['0']
-            return render(request, 'cadastro_suprimento.html', {'form': form,'errors': erro})
+            form.save()
+            return redirect('criar_suprimento')
         else:
             erro = iterando_erro(form)
-            print(erro)
-            return render(request, 'cadastro_suprimento.html', {'form': form,'errors': erro})
-    else:
-        suprimento_id = request.session.get('suprimento_id', None)
-        request.session['suprimento_id_novo'] = suprimento_id
-        request.session['editar'] = False
-        if suprimento_id != None:
-            suprimento = get_object_or_404(Suprimento, id=suprimento_id)
-            form = SuprimentoForm(instance=suprimento)
-            request.session['editar'] = True
-        else:
-            request.session['editar'] = False
-            form = SuprimentoForm()
-        print(request.session.get('editar', None))
-        print(suprimento_id)
-        request.session.pop('suprimento_id', None)
+            return render(request, 'cadastro_suprimento.html', {
+                'form': form,
+                'suprimentos': Suprimento.objects.all(),
+                'errors': erro,
+                'suprimento_id': suprimento_id,
+            })
 
-    return render(request, 'cadastro_suprimento.html', {'form': form})
+    else:
+        form = SuprimentoForm(instance=suprimento)
+
+    suprimentos = Suprimento.objects.all()
+    return render(request, 'cadastro_suprimento.html', {
+        'form': form,
+        'suprimentos': suprimentos,
+        'suprimento_id': suprimento_id,
+        'errors': [],
+    })
 
 @login_required(login_url='login')
-def criar_projeto(request):
+def criar_projeto(request, projeto_id=None):
+    if projeto_id:
+        projeto = Projeto.objects.get(id=projeto_id)
+    else:
+        projeto = None
+
     if request.method == 'POST':
-        form = ProjetoForm(request.POST)
+        # Excluir projeto
+        if 'delete' in request.POST:
+            Projeto.objects.filter(id=request.POST.get('delete')).delete()
+            return redirect('criar_projeto')
+
+        # Criar ou editar projeto
+        form = ProjetoForm(request.POST, instance=projeto)
         if form.is_valid():
-            print("funcionou")
-            #if 'save_unidade' in request.POST:
-            #    print("clicou")
-            form.save()  # Salva a nova unidade
-            form = ProjetoForm()
-            erro = ['0']
-            return render(request, 'cadastro_projeto.html', {'form': form,'errors': erro})
+            form.save()
+            return redirect('criar_projeto')
         else:
             erro = iterando_erro(form)
-            print(erro)
-            return render(request, 'cadastro_projeto.html', {'form': form,'errors': erro})
-    else:
-        form = ProjetoForm()
+            return render(request, 'cadastro_projeto.html', {
+                'form': form,
+                'projetos': Projeto.objects.all(),
+                'errors': erro,
+                'projeto_id': projeto_id,
+            })
 
-    return render(request, 'cadastro_projeto.html', {'form': form})
+    else:
+        form = ProjetoForm(instance=projeto)
+
+    projetos = Projeto.objects.all()
+    return render(request, 'cadastro_projeto.html', {
+        'form': form,
+        'projetos': projetos,
+        'projeto_id': projeto_id,
+        'errors': [],
+    })
 
 
 @login_required(login_url='login')
@@ -440,36 +471,7 @@ def entrega_suprimento(request):
         'unidades': unidades,
     })
 
-@login_required(login_url='login')
-def pesquisa_suprimento(request):
-    form = Suprimento.objects.all()
-    if request.method == 'POST':
-        suprimento_id = request.POST.get("suprimento_id")
-        if suprimento_id:
-            suprimento = Suprimento.objects.get(id=suprimento_id)
-            mensagem = f"Você selecionou o suprimento: {suprimento.nome}"
-            request.session['suprimento_id'] = suprimento_id
-            print(mensagem)
-            #return render(request, 'pesquisa_suprimentos.html', {'form': form})
-            return redirect('criar_suprimento')
-    else:
-        return render(request, 'pesquisa_suprimentos.html',{'form':form})
 
-@login_required(login_url='login')
-def pesquisa_unidade(request):
-    form_projeto = UnidadeForm()
-    form = Unidade.objects.all()
-    if request.method == 'POST':
-        if 'save_unidade' in request.POST:
-            projeto_id = request.POST.get("projeto")
-            form = Unidade.objects.filter(projeto_id=projeto_id)
-            return render(request, 'pesquisa_unidades.html', {'form': form, 'form_projeto': form_projeto})
-        unidade_id = request.POST.get("unidade_id")
-        if unidade_id:
-            request.session['unidade_id'] = unidade_id
-            return redirect('criar_unidade')
-    else:
-        return render(request, 'pesquisa_unidades.html', {'form': form,'form_projeto':form_projeto})
 
 @login_required(login_url='login')
 def pesquisa_entrega(request):

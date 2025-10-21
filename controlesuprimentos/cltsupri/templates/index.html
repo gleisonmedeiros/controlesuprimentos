@@ -22,24 +22,16 @@
           <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="{% url 'criar_projeto' %}">Projeto</a></li>
             <li><a class="dropdown-item" href="{% url 'criar_unidade' %}">Unidade</a></li>
-            <li><a class="dropdown-item" href="{% url 'criar_suprimento' %}">Suprimento</a></li>
             <li><a class="dropdown-item" href="{% url 'cadastrar_equipamento' %}">Equipamento</a></li>
+            <li><a class="dropdown-item" href="{% url 'criar_suprimento' %}">Suprimento</a></li>
             <li><a class="dropdown-item" href="{% url 'entrega_suprimento' %}">Entrega</a></li>
           </ul>
         </li>
 
-        <!-- Pesquisa -->
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Pesquisa</a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="{% url 'pesquisa_suprimento' %}">Suprimento</a></li>
-            <li><a class="dropdown-item" href="{% url 'pesquisa_unidade' %}">Unidade</a></li>
-          </ul>
-        </li>
 
         <!-- Relatórios -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Relatório</a>
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Relatório de insumos</a>
           <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="{% url 'pesquisa' %}">Geral</a></li>
             <li><a class="dropdown-item" href="{% url 'total_unidade' %}">Total por Unidade</a></li>
