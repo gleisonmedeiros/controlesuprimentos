@@ -845,51 +845,70 @@ def cadastro_equipamento(request, equipamento_id=None):
     })
 
 @login_required(login_url='login')
-def associar_unidade(request):
-    selected_projeto = request.POST.get("projeto") or request.GET.get("projeto")
-    selected_unidade = request.POST.get("unidade") or request.GET.get("unidade")
+def associar_unidade_manage(request, pk=None, action=None):
+    """
+    View única para criar, editar e excluir associações
+    entre prefixo de nome de máquina e unidades.
+    """
 
-    if request.method == "POST":
-        form = UnidadeAssociacaoForm(request.POST)
-        if form.is_valid():
-            prefixo = form.cleaned_data['prefixo_nome']
-            unidade = form.cleaned_data['unidade']
+    # --- EXCLUSÃO ---
+    if action == 'delete' and pk:
+        associacao = get_object_or_404(UnidadeAssociacao, pk=pk)
+        prefixo = associacao.prefixo_nome
+        associacao.delete()
 
-            # Salva ou atualiza a associação
-            UnidadeAssociacao.objects.update_or_create(
-                prefixo_nome=prefixo,
-                defaults={'unidade': unidade}
-            )
+        # Desassocia as máquinas com o prefixo
+        Maquina.objects.filter(nome__startswith=prefixo).update(unidade_associada=None)
+        messages.success(request, f"Associação com prefixo '{prefixo}' foi excluída.")
+        return redirect('associar-unidade-manage')
 
-            # Atualiza todas as máquinas cujo nome comece com o prefixo
+    # --- EDIÇÃO OU CRIAÇÃO ---
+    if pk and action == 'edit':
+        associacao = get_object_or_404(UnidadeAssociacao, pk=pk)
+        form = UnidadeAssociacaoForm(request.POST or None, instance=associacao)
+    else:
+        associacao = None
+        form = UnidadeAssociacaoForm(request.POST or None)
+
+    # --- SALVAR ---
+    if request.method == 'POST' and form.is_valid():
+        prefixo = form.cleaned_data['prefixo_nome']
+        unidade = form.cleaned_data['unidade']
+
+        # Verifica duplicidade
+        qs = UnidadeAssociacao.objects.filter(prefixo_nome=prefixo)
+        if associacao:
+            qs = qs.exclude(pk=associacao.pk)
+
+        if qs.exists():
+            form.add_error(None, "Este prefixo já está associado a uma unidade.")
+        else:
+            associacao = form.save()
+
+            # Atualiza máquinas que começam com o prefixo
             Maquina.objects.filter(nome__startswith=prefixo).update(unidade_associada=unidade)
 
+            if pk and action == 'edit':
+                messages.success(request, f"Associação '{prefixo}' atualizada com sucesso.")
+            else:
+                messages.success(request, f"Associação '{prefixo}' criada com sucesso.")
             return redirect('associar_unidade')
-    else:
-        form = UnidadeAssociacaoForm()
 
-    # Carregar todos os projetos
+    # --- LISTAGEM E DADOS DO TEMPLATE ---
     projetos = Projeto.objects.all()
-
-    # Se tem projeto selecionado, filtra unidades
-    if selected_projeto:
-        unidades = Unidade.objects.filter(projeto_id=selected_projeto).order_by("nome")
-    else:
-        unidades = Unidade.objects.none()  # vazio até escolher projeto
-
-    # Carregar todas as associações
+    unidades = Unidade.objects.all().order_by("nome")
     associacoes = UnidadeAssociacao.objects.select_related('unidade__projeto').all()
 
     context = {
-        "form": form,
-        "associacoes": associacoes,
-        "projetos": projetos,
-        "unidades": unidades,
-        "selected_projeto": selected_projeto,
-        "selected_unidade": selected_unidade,
+        'form': form,
+        'associacoes': associacoes,
+        'projetos': projetos,
+        'unidades': unidades,
+        'editando': bool(associacao),
+        'associacao_edit': associacao,
     }
 
-    return render(request, "associar_unidade.html", context)
+    return render(request, 'associar_unidade.html', context)
 
 @login_required(login_url='login')
 def modelo_fornecedor_manage(request, pk=None, action=None):

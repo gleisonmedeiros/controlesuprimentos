@@ -12,7 +12,7 @@ class Projeto(models.Model):
         return self.nome
 
 class EquipamentoCadastro(models.Model):
-    nome = models.CharField(max_length=100, unique=True)
+    nome = models.CharField(max_length=100, unique=False)
     tipo = models.CharField(max_length=100, blank=True)
 
     def __str__(self):
