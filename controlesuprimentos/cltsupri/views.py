@@ -63,7 +63,7 @@ def cadastrar_equipamento(request, equipamento_id=None):
             equipamento_del = get_object_or_404(EquipamentoCadastro, pk=request.POST.get('delete'))
             equipamento_del.delete()
             messages.success(request, 'Equipamento excluído com sucesso!')
-            return redirect('cadastro_equipamento')
+            return redirect('cadastrar_equipamento')
 
         # Cadastro ou edição
         form = EquipamentoCadastroForm(request.POST, instance=equipamento)
@@ -802,13 +802,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Projeto, Unidade, Equipamento, EquipamentoCadastro
 from .forms import EquipamentoForm
 
+
 @login_required(login_url='login')
-def cadastro_equipamento(request, equipamento_id=None):
+def cadastro_equipamento_consolidado(request, equipamento_id=None):
     projetos = Projeto.objects.all()
 
+    # Seleção de projeto/unidade
     selected_projeto = request.POST.get('projeto', '') if request.method == 'POST' else ''
     selected_unidade = request.POST.get('unidade', '') if request.method == 'POST' else ''
 
+    # Buscar instância se estiver editando
     equipamento_instance = None
     if equipamento_id:
         equipamento_instance = get_object_or_404(Equipamento, id=equipamento_id)
@@ -817,23 +820,34 @@ def cadastro_equipamento(request, equipamento_id=None):
         if not selected_unidade:
             selected_unidade = str(equipamento_instance.unidade.id)
 
-    if selected_projeto:
-        unidades = Unidade.objects.filter(projeto_id=selected_projeto).order_by("nome")
-    else:
-        unidades = Unidade.objects.none()
+    # Filtrar unidades pelo projeto
+    unidades = Unidade.objects.filter(projeto_id=selected_projeto).order_by(
+        "nome") if selected_projeto else Unidade.objects.none()
 
-    if request.method == 'POST' and 'patrimonio' in request.POST:
-        form = EquipamentoForm(request.POST, instance=equipamento_instance)
-        if form.is_valid():
-            form.save()
-            return redirect('cadastro_equipamento')
+    # Processar POST
+    if request.method == 'POST':
+        # Exclusão
+        if 'excluir' in request.POST and equipamento_instance:
+            equipamento_instance.delete()
+            return redirect('cadastro_equipamento_consolidado')
+
+        # Cadastro / edição
+        if 'patrimonio' in request.POST:
+            form = EquipamentoForm(request.POST, instance=equipamento_instance)
+            if form.is_valid():
+                form.save()
+                return redirect('cadastro_equipamento_consolidado')
     else:
         form = EquipamentoForm(instance=equipamento_instance)
 
+    # Equipamentos da tabela
     equipamentos = Equipamento.objects.select_related('unidade').order_by('unidade__nome', 'patrimonio')
-    equipamentos_cadastro = EquipamentoCadastro.objects.all().order_by('nome')  # Para popular o select
+    if selected_projeto:
+        equipamentos = equipamentos.filter(unidade__projeto_id=selected_projeto)
 
-    return render(request, 'cadastro_equipamento.html', {
+    equipamentos_cadastro = EquipamentoCadastro.objects.all().order_by('nome')
+
+    return render(request, 'cadastro_equipamento_consolidado.html', {
         'projetos': projetos,
         'unidades': unidades,
         'form': form,

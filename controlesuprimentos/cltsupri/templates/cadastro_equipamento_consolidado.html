@@ -6,6 +6,7 @@
 <form method="POST" class="mb-4">
     {% csrf_token %}
 
+    <!-- Projeto / Unidade / Setor -->
     <div class="row mb-3">
         <div class="col-md-4">
             <label for="id_projeto">Projeto</label>
@@ -37,6 +38,7 @@
         </div>
     </div>
 
+    <!-- Patrimônio / Marca / Modelo -->
     <div class="row mb-3">
         <div class="col-md-4">
             <label for="id_patrimonio">Patrimônio</label>
@@ -54,31 +56,40 @@
         </div>
     </div>
 
-    <div class="row mb-3">
-        <div class="col-md-4">
-            <label for="id_nome">Nome</label>
-            <select name="nome" id="id_nome" class="form-control">
-                <option value="">Selecione o Nome</option>
-                {% for eq in equipamentos_cadastro %}
-                    <option value="{{ eq.nome }}" {% if form.nome.value == eq.nome %}selected{% endif %}>
-                        {{ eq.nome }}{% if eq.tipo %} ({{ eq.tipo }}){% endif %}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <!-- Tipo oculto -->
-        <input type="hidden" name="tipo" id="id_tipo" value="{{ form.tipo.value|default_if_none:'' }}">
+    <!-- Nome / Tipo -->
+    <div class="col-md-4 mb-3">
+        <label for="id_nome">Nome</label>
+        <select id="id_nome" class="form-control">
+            <option value="">Selecione o Nome</option>
+            {% for eq in equipamentos_cadastro %}
+                <option value="{{ eq.id }}" data-nome="{{ eq.nome }}" data-tipo="{{ eq.tipo }}"
+                    {% if form.nome.value == eq.nome and form.tipo.value == eq.tipo %}selected{% endif %}>
+                    {{ eq.nome }}{% if eq.tipo %} ({{ eq.tipo }}){% endif %}
+                </option>
+            {% endfor %}
+        </select>
     </div>
 
-    <div class="d-flex gap-2">
+    <input type="hidden" name="nome" id="hidden_nome" value="{{ form.nome.value|default_if_none:'' }}">
+    <input type="hidden" name="tipo" id="hidden_tipo" value="{{ form.tipo.value|default_if_none:'' }}">
+
+    <script>
+    document.getElementById('id_nome').addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        document.getElementById('hidden_nome').value = opt.dataset.nome || '';
+        document.getElementById('hidden_tipo').value = opt.dataset.tipo || '';
+    });
+    </script>
+
+    <div class="d-flex gap-2 mb-3">
         <button type="submit" class="btn btn-primary">{% if equipamento_id %}Salvar Alterações{% else %}Cadastrar Equipamento{% endif %}</button>
         {% if equipamento_id %}
-            <a href="{% url 'cadastro_equipamento' %}" class="btn btn-secondary">Cancelar Edição</a>
+            <a href="{% url 'cadastro_equipamento_consolidado' %}" class="btn btn-secondary">Cancelar Edição</a>
         {% endif %}
     </div>
 </form>
 
+<!-- Tabela de equipamentos -->
 <h5>Equipamentos cadastrados</h5>
 <table class="table table-striped">
     <thead class="table-dark">
@@ -99,12 +110,20 @@
                 <td>{{ equipamento.unidade.projeto.nome }}</td>
                 <td>{{ equipamento.unidade.nome }}</td>
                 <td>{{ equipamento.setor }}</td>
-                <td>{{ equipamento.nome }}</td>
+                <td>{{ equipamento.nome }}{% if equipamento.tipo %} ({{ equipamento.tipo }}){% endif %}</td>
                 <td>{{ equipamento.patrimonio }}</td>
                 <td>{{ equipamento.marca }}</td>
                 <td>{{ equipamento.modelo }}</td>
-                <td>
+                <td class="d-flex gap-1">
                     <a href="{% url 'cadastro_equipamento_editar' equipamento.id %}" class="btn btn-sm btn-warning">Editar</a>
+                    <form action="{% url 'cadastro_equipamento_editar' equipamento.id %}" method="POST" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="excluir" value="1">
+                        <button type="submit" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Tem certeza que deseja excluir este equipamento?');">
+                            Excluir
+                        </button>
+                    </form>
                 </td>
             </tr>
         {% empty %}
@@ -113,10 +132,11 @@
     </tbody>
 </table>
 
+<!-- Auto submit ao mudar projeto -->
 <script>
-  document.getElementById('id_projeto').addEventListener('change', function() {
+document.getElementById('id_projeto').addEventListener('change', function() {
     this.form.submit();
-  });
+});
 </script>
 
 {% endblock %}
