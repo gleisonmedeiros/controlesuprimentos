@@ -910,7 +910,7 @@ def associar_unidade_manage(request, pk=None, action=None):
 
     # --- LISTAGEM E DADOS DO TEMPLATE ---
     projetos = Projeto.objects.all()
-    unidades = Unidade.objects.all().order_by("nome")
+    unidades = Unidade.objects.select_related("projeto").order_by("projeto__nome", "nome")
     associacoes = UnidadeAssociacao.objects.select_related('unidade__projeto').all()
 
     context = {

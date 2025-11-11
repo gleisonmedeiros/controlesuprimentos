@@ -90,9 +90,24 @@ class UnidadeAssociacaoForm(forms.ModelForm):
         model = UnidadeAssociacao
         fields = ['prefixo_nome', 'unidade']
         widgets = {
-            'prefixo_nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome começa com...'}),
+            'prefixo_nome': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nome começa com...'
+            }),
             'unidade': forms.Select(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # 🔹 Busca as unidades já com os projetos (JOIN no banco)
+        unidades = Unidade.objects.select_related("projeto").order_by("projeto__nome", "nome")
+
+        # 🔹 Define o queryset ordenado
+        self.fields['unidade'].queryset = unidades
+
+        # 🔹 Mostra "Projeto - Unidade" no select
+        self.fields['unidade'].label_from_instance = lambda obj: f"{obj.projeto.nome} - {obj.nome}"
 
 class EquipamentoForm(forms.ModelForm):
     class Meta:
