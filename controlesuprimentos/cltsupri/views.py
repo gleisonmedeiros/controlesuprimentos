@@ -1008,6 +1008,10 @@ def maquinas_equipamentos_por_unidade(request):
     tipo_equipamento = request.GET.get('tipo')
     tempo_off_min = request.GET.get('tempo_off_min')
     fornecedor_associado = request.GET.get('fornecedor')
+    processadores_filtro = request.GET.getlist('processador')
+    memoria_filtro = request.GET.get('memoria')  # ✅ apenas um valor
+
+    print(memoria_filtro)
 
     # Unidades
     if projeto_id:
@@ -1019,7 +1023,7 @@ def maquinas_equipamentos_por_unidade(request):
     maquinas_qs = Maquina.objects.select_related('unidade_associada').all()
     equipamentos_qs = Equipamento.objects.select_related('unidade').all()
 
-    # --- Aplicando filtros diretamente no queryset ---
+    # --- Aplicando filtros ---
     if projeto_id:
         maquinas_qs = maquinas_qs.filter(unidade_associada__projeto_id=projeto_id)
         equipamentos_qs = equipamentos_qs.filter(unidade__projeto_id=projeto_id)
@@ -1038,13 +1042,26 @@ def maquinas_equipamentos_por_unidade(request):
             maquinas_qs = maquinas_qs.filter(tempo_off_dias__gte=tempo_off_min_val)
         except ValueError:
             pass
+    if processadores_filtro:
+        from django.db.models import Q
+        query = Q()
+        for proc in processadores_filtro:
+            query |= Q(processador__icontains=proc)
+        maquinas_qs = maquinas_qs.filter(query)
+    if memoria_filtro:
+        try:
+            # Substitui vírgula por ponto
+            memoria_val = float(memoria_filtro.replace(',', '.'))
+            maquinas_qs = maquinas_qs.filter(memoria_total=memoria_val)
+        except ValueError:
+            pass
 
-    # --- Pré-carrega associações de máquinas ---
+
+    # --- Atualiza unidade associada automaticamente ---
     associacoes = list(UnidadeAssociacao.objects.select_related('unidade').all())
     associacoes_dict = {a.prefixo_nome: a.unidade for a in associacoes}
 
-    # --- Atualiza máquinas em memória ---
-    maquinas = list(maquinas_qs)  # converte após filtros
+    maquinas = list(maquinas_qs)
     maquinas_para_atualizar = []
     for m in maquinas:
         unidade_encontrada = None
@@ -1057,47 +1074,58 @@ def maquinas_equipamentos_por_unidade(request):
             m.unidade_associada = unidade_encontrada
             maquinas_para_atualizar.append(m)
 
-    # Atualiza todas de uma vez
     if maquinas_para_atualizar:
         Maquina.objects.bulk_update(maquinas_para_atualizar, ['unidade_associada'])
 
-    # Ordenação e atributos extras
+    # --- Organização ---
     maquinas.sort(key=lambda x: (x.unidade_associada.nome if x.unidade_associada else '', x.nome))
     for m in maquinas:
         m.unidade_associada_display = m.unidade_associada or ''
         m.memoria_total_display = f"{int(m.memoria_total)},0" if m.memoria_total and m.memoria_total >= 1 else '-'
         m.fornecedor_associado_display = m.fornecedor_associado if m.fornecedor_associado else '-'
 
-    # Equipamentos filtrados e ordenados
     equipamentos = list(equipamentos_qs.order_by('unidade__nome', 'nome'))
 
-    # Preenche o tipo dos equipamentos com base no cadastro
     cadastros = {ec.nome: ec.tipo for ec in EquipamentoCadastro.objects.all()}
     equipamentos_para_salvar = []
-
     for e in equipamentos:
         if not e.tipo and e.nome in cadastros:
             e.tipo = cadastros[e.nome]
             equipamentos_para_salvar.append(e)
-
-    # Atualiza no banco, se desejar salvar os tipos
     if equipamentos_para_salvar:
         Equipamento.objects.bulk_update(equipamentos_para_salvar, ['tipo'])
 
-    # Fornecedores
+    # 🔹 Agora os combos só mostram dados das máquinas filtradas
+    processadores = (
+        maquinas_qs.exclude(processador__isnull=True)
+        .exclude(processador__exact='')
+        .values_list('processador', flat=True)
+        .distinct()
+        .order_by('processador')
+    )
+
     fornecedores = (
-        Maquina.objects
-        .exclude(fornecedor_associado__isnull=True)
+        maquinas_qs.exclude(fornecedor_associado__isnull=True)
         .exclude(fornecedor_associado__exact='')
         .values_list('fornecedor_associado', flat=True)
         .distinct()
         .order_by('fornecedor_associado')
     )
 
+    # 🔹 Opções únicas de memória RAM (para o select) — todas as memórias do banco
+    memorias = (
+        Maquina.objects.exclude(memoria_total__isnull=True)
+        .values_list('memoria_total', flat=True)
+        .distinct()
+        .order_by('memoria_total')
+    )
+
     return render(request, 'maquinas_equipamentos.html', {
         'projetos': projetos,
         'unidades': unidades,
         'fornecedores': fornecedores,
+        'processadores': processadores,
+        'memorias': memorias,
         'maquinas': maquinas,
         'equipamentos': equipamentos,
         'filtros': {
@@ -1107,8 +1135,11 @@ def maquinas_equipamentos_por_unidade(request):
             'tipo_equipamento': tipo_equipamento or '',
             'tempo_off_min': tempo_off_min or '',
             'fornecedor_associado': fornecedor_associado or '',
+            'processador': processadores_filtro,
+            'memoria': memoria_filtro or '',
         }
     })
+
 
 
 

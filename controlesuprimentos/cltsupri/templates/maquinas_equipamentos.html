@@ -3,10 +3,10 @@
 {% block content %}
 <h5 class="mb-3">Inventário de Máquinas e Equipamentos</h5>
 
-<!-- Filtro + botão apagar todas -->
 <div class="row g-3 align-items-end mb-4">
 <form method="get" class="col-md-10 row g-3 align-items-end">
-  <!-- Linha 1: Projeto, Unidade, Status -->
+
+  <!-- Projeto -->
   <div class="col-md-4">
     <label for="projeto" class="form-label">Projeto</label>
     <select name="projeto" id="projeto" class="form-select form-select-sm" onchange="this.form.submit()">
@@ -17,6 +17,7 @@
     </select>
   </div>
 
+  <!-- Unidade -->
   <div class="col-md-4">
     <label for="unidade" class="form-label">Unidade Associada</label>
     <select name="unidade" id="unidade" class="form-select form-select-sm">
@@ -27,6 +28,7 @@
     </select>
   </div>
 
+  <!-- Status -->
   <div class="col-md-4">
     <label for="status" class="form-label">Status Máquina</label>
     <select name="status" id="status" class="form-select form-select-sm">
@@ -36,7 +38,7 @@
     </select>
   </div>
 
-  <!-- Linha 2: Tipo, Tempo OFF, Fornecedor -->
+  <!-- Tipo Equipamento -->
   <div class="col-md-4">
     <label for="tipo" class="form-label">Tipo Equipamento</label>
     <select name="tipo" id="tipo" class="form-select form-select-sm">
@@ -47,12 +49,14 @@
     </select>
   </div>
 
+  <!-- Tempo OFF -->
   <div class="col-md-4">
     <label for="tempo_off_min" class="form-label">Tempo OFF mínimo (dias)</label>
-    <input type="number" name="tempo_off_min" id="tempo_off_min" min="0" class="form-control form-control-sm"
-           value="{{ filtros.tempo_off_min }}">
+    <input type="number" name="tempo_off_min" id="tempo_off_min" min="0"
+           class="form-control form-control-sm" value="{{ filtros.tempo_off_min }}">
   </div>
 
+  <!-- Fornecedor -->
   <div class="col-md-4">
     <label for="fornecedor" class="form-label">Fornecedor Associado</label>
     <select name="fornecedor" id="fornecedor" class="form-select form-select-sm">
@@ -63,33 +67,52 @@
     </select>
   </div>
 
-  <!-- Linha 3: Botões Filtrar / Limpar -->
+  <!-- Processador -->
+  <div class="col-md-4">
+    <label for="processador" class="form-label">Processador</label>
+    <select name="processador" id="processador" class="form-select form-select-sm" multiple>
+      {% for p in processadores %}
+        <option value="{{ p }}" {% if p in filtros.processador %}selected{% endif %}>{{ p }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+   <div class="col-md-4">
+  <label for="memoria" class="form-label">Memória RAM (GB)</label>
+  <select name="memoria" id="memoria" class="form-select form-select-sm">
+    <option value="">Todas</option>
+    {% for mem in memorias %}
+      <option value="{{ mem }}" {% if filtros.memoria == mem|stringformat:'s' %}selected{% endif %}>{{ mem|floatformat:0 }} GB</option>
+    {% endfor %}
+  </select>
+</div>
+
+  <!-- Botões -->
   <div class="col-md-6 col-lg-3">
-    <button type="submit" class="btn btn-primary btn-sm text-nowrap w-100">Filtrar</button>
+    <button type="submit" class="btn btn-primary btn-sm w-100">Filtrar</button>
   </div>
 
   <div class="col-md-6 col-lg-3">
-    <a href="{% url 'maquinas_equipamentos_por_unidade' %}" class="btn btn-secondary btn-sm text-nowrap w-100">Limpar</a>
+    <a href="{% url 'maquinas_equipamentos_por_unidade' %}" class="btn btn-secondary btn-sm w-100">Limpar</a>
   </div>
 </form>
 
-  <!-- Botão Apagar Todas -->
+  <!-- Apagar todas -->
   <div class="col-md-2 text-end">
     <form method="post" action="{% url 'apagar_todas_maquinas' %}">
       {% csrf_token %}
-      <button type="submit" class="btn btn-danger btn-sm text-nowrap"
+      <button type="submit" class="btn btn-danger btn-sm"
         onclick="return confirm('Tem certeza que deseja apagar todas as máquinas?')">APAGAR TODAS</button>
     </form>
   </div>
 
   <div class="col-md-6 col-lg-3">
-  <a href="{% url 'exportar_maquinas_excel' %}?projeto={{ filtros.projeto_id }}&unidade={{ filtros.unidade_id }}&status={{ filtros.status_maquina }}&tipo={{ filtros.tipo_equipamento }}&tempo_off_min={{ filtros.tempo_off_min }}&fornecedor={{ filtros.fornecedor_associado }}"
-     class="btn btn-success btn-sm text-nowrap w-100">Exportar Excel</a>
+    <a href="{% url 'exportar_maquinas_excel' %}?projeto={{ filtros.projeto_id }}&unidade={{ filtros.unidade_id }}&status={{ filtros.status_maquina }}&tipo={{ filtros.tipo_equipamento }}&tempo_off_min={{ filtros.tempo_off_min }}&fornecedor={{ filtros.fornecedor_associado }}"
+       class="btn btn-success btn-sm w-100">Exportar Excel</a>
+  </div>
 </div>
 
-</div>
-
-<!-- Máquinas -->
+<!-- Tabela de máquinas -->
 {% if maquinas %}
   <div class="table-responsive">
     <table class="table table-striped table-hover table-sm small align-middle">
@@ -100,7 +123,7 @@
           <th>Tag</th>
           <th>Sistema Operacional</th>
           <th>Processador</th>
-          <th>RAM<br>(GB)</th>
+          <th>RAM (GB)</th>
           <th>Placa-mãe</th>
           <th>Fabricante</th>
           <th>Disco</th>
@@ -145,7 +168,6 @@
 
 <hr>
 
-<!-- Equipamentos -->
 {% if equipamentos %}
   <div class="table-responsive">
     <table class="table table-striped table-hover table-sm small align-middle">
@@ -188,11 +210,9 @@
   <p>Nenhum equipamento encontrado.</p>
 {% endif %}
 
-<!-- Scripts do Select2 -->
+<!-- Select2 CSS + Bootstrap Theme -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<!-- Tema Bootstrap 5 -->
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
@@ -201,13 +221,16 @@ document.addEventListener("DOMContentLoaded", function() {
     placeholder: 'Pesquise a unidade...',
     allowClear: true,
     width: '100%',
-    theme: 'bootstrap-5',  // 👈 aplica o visual do Bootstrap
-    language: {
-      noResults: () => "Nenhuma unidade encontrada",
-      searching: () => "Buscando..."
-    }
+    theme: 'bootstrap-5'
+  });
+
+  $('#processador').select2({
+    placeholder: 'Selecione um ou mais processadores...',
+    allowClear: true,
+    width: '100%',
+    theme: 'bootstrap-5',
+    closeOnSelect: false
   });
 });
 </script>
-
 {% endblock %}
