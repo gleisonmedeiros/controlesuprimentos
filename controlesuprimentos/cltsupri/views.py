@@ -1305,21 +1305,32 @@ def consolidado_maquinas(request):
     edit_id = request.POST.get('edit') or request.GET.get('edit')
     obj = ConsolidadoMaquinas.objects.filter(id=edit_id).first() if edit_id else None
 
-    # Lista de projetos para select
+    # Lista de projetos
     projetos = Projeto.objects.all().order_by('nome')
 
-    # Projeto selecionado (GET ou POST)
-    selected_projeto = request.POST.get('projeto') or request.GET.get('projeto')
+    # Definir projeto selecionado
+    if request.method == 'POST':
+        selected_projeto = request.POST.get('projeto') or ''
+    elif obj:
+        selected_projeto = str(obj.projeto.id)
+    else:
+        selected_projeto = request.GET.get('projeto') or ''
 
-    # Lista de unidades filtradas pelo projeto (sempre queryset, nunca lista)
+    # Definir unidades (se tiver projeto selecionado)
     if selected_projeto:
         unidades = Unidade.objects.filter(projeto_id=selected_projeto).order_by('nome')
     else:
         unidades = Unidade.objects.none()
 
-    # Unidade selecionada (para manter a seleção)
-    selected_unidade = request.POST.get('unidade') or (str(obj.unidade.id) if obj else '')
+    # Unidade selecionada
+    if request.method == 'POST':
+        selected_unidade = request.POST.get('unidade') or ''
+    elif obj:
+        selected_unidade = str(obj.unidade.id)
+    else:
+        selected_unidade = ''
 
+    # Processamento POST (criar, editar ou deletar)
     if request.method == 'POST':
         # Exclusão
         if 'delete' in request.POST:
@@ -1328,16 +1339,16 @@ def consolidado_maquinas(request):
             messages.success(request, 'Registro removido com sucesso!')
             return redirect('consolidado_maquinas')
 
-        # Criação ou edição
+        # Criação/Edição
         form = ConsolidadoMaquinasForm(request.POST, instance=obj)
-        form.fields['unidade'].queryset = unidades  # garante queryset válido
+        form.fields['unidade'].queryset = unidades
 
         if form.is_valid():
             form.save()
             messages.success(request, f'Registro {"atualizado" if obj else "criado"} com sucesso!')
             return redirect('consolidado_maquinas')
     else:
-        # GET
+        # GET (exibe formulário)
         form = ConsolidadoMaquinasForm(instance=obj)
         form.fields['unidade'].queryset = unidades
 
@@ -1350,6 +1361,7 @@ def consolidado_maquinas(request):
         'selected_projeto': selected_projeto,
         'selected_unidade': selected_unidade,
     })
+
 
 
 @login_required(login_url='login')

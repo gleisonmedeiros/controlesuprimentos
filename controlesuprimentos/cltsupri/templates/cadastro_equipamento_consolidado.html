@@ -22,11 +22,11 @@
 
         <div class="col-md-4">
             <label for="id_unidade">Unidade</label>
-            <select name="unidade" id="id_unidade" class="form-control">
+            <select name="unidade" id="id_unidade" class="form-control select2-field">
                 <option value="">Selecione uma Unidade</option>
                 {% for unidade in unidades %}
                     <option value="{{ unidade.id }}" {% if selected_unidade == unidade.id|stringformat:"s" %}selected{% endif %}>
-                        {{ unidade.nome }}
+                        {{ unidade.projeto.nome }} - {{ unidade.nome }}
                     </option>
                 {% endfor %}
             </select>
@@ -138,5 +138,36 @@ document.getElementById('id_projeto').addEventListener('change', function() {
     this.form.submit();
 });
 </script>
+
+<!-- Select2 (para busca automática em Unidade) -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    $('#id_unidade').select2({
+        placeholder: "Pesquise uma unidade...",
+        allowClear: true,
+        width: '100%',
+        language: {
+            noResults: function() {
+                return "Nenhum resultado encontrado";
+            }
+        }
+    });
+});
+</script>
+
+<style>
+.select2-container .select2-selection--single {
+  height: 38px !important;
+  border: 1px solid #ced4da !important;
+  border-radius: 0.375rem !important;
+}
+.select2-selection__rendered {
+  line-height: 36px !important;
+}
+</style>
 
 {% endblock %}
