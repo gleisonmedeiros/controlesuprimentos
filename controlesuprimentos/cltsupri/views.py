@@ -1254,7 +1254,7 @@ def relatorio_maquinas_por_projeto(request):
         unidades = Unidade.objects.filter(projeto_id=projeto_id)
 
         for unidade in unidades:
-            # Quantidade atual de máquinas (não painel)
+            # Quantidade atual de máquinas (sem painéis)
             qtd_atual = unidade.maquinas_associadas.filter(~Q(nome__icontains='painel')).count()
             # Quantidade de painéis
             total_paineis = unidade.maquinas_associadas.filter(nome__icontains='painel').count()
@@ -1263,35 +1263,38 @@ def relatorio_maquinas_por_projeto(request):
             qtd_prevista = consolidado.quantidade if consolidado else 0
 
             # Equipamentos previstos (ConsolidadoEquipamento)
-            consolidado_equipamentos = ConsolidadoEquipamento.objects.filter(projeto_id=projeto_id, unidade=unidade).select_related('equipamento')
+            consolidado_equipamentos = ConsolidadoEquipamento.objects.filter(
+                projeto_id=projeto_id,
+                unidade=unidade
+            ).select_related('equipamento')
 
             equipamentos_previstos = ', '.join(
                 [f"{ce.equipamento.nome} ({ce.equipamento.tipo}) {ce.quantidade}" for ce in consolidado_equipamentos]
             ) if consolidado_equipamentos.exists() else '-'
 
-            # Query para buscar tipo do EquipamentoCadastro, por nome do equipamento atual
-            equip_cad_tipo_subquery = EquipamentoCadastro.objects.filter(
-                nome=OuterRef('nome')
-            ).values('tipo')[:1]
+            # Agrupar equipamentos atuais (por nome e tipo)
+            equipamentos_agrupados = (
+                Equipamento.objects
+                .filter(unidade=unidade)
+                .values('nome', 'tipo')
+                .annotate(quantidade=Count('id'))
+                .order_by('nome', 'tipo')
+            )
 
-            equipamentos_agrupados = Equipamento.objects.filter(unidade=unidade) \
-                .annotate(
-                    tipo_cadastro=Subquery(equip_cad_tipo_subquery, output_field=CharField()),
-                    tipo_final=Case(
-                        When(tipo_cadastro__isnull=False, then=F('tipo_cadastro')),
-                        When(tipo__isnull=False, then=F('tipo')),
-                        default=Value(''),
-                        output_field=CharField(),
-                    )
-                ) \
-                .values('nome', 'tipo_final') \
-                .annotate(quantidade=Count('id')) \
-                .order_by('nome')
+            # Substituir 'IMPRESSORA' por emoji e formatar
+            equipamentos_atuais = ', '.join([
+                f"{item['nome'].replace('IMPRESSORA', '🖨️')} ({item['tipo']}) {item['quantidade']}"
+                for item in equipamentos_agrupados
+            ]) if equipamentos_agrupados else '-'
 
-            equipamentos_atuais = ', '.join(
-                [f"{item['nome']} ({item['tipo_final']}) {item['quantidade']}".strip() for item in equipamentos_agrupados]
-            ) if equipamentos_agrupados else '-'
+            # 🔹 Ajustes de texto conforme solicitado
+            equipamentos_atuais = (
+                equipamentos_atuais
+                .replace('(MULTIFUNCIONAL)', '(MULTI)')
+                .replace('TÉRMICA (BOLETO)', '(TÉRMICA)')
+            )
 
+            # Montar dados da unidade
             unidades_data.append({
                 'unidade': unidade.nome,
                 'qtd_prevista': qtd_prevista,
@@ -1301,6 +1304,7 @@ def relatorio_maquinas_por_projeto(request):
                 'total_paineis': total_paineis,
             })
 
+            # Somatórios gerais
             total_geral_prevista += qtd_prevista
             total_geral_atual += qtd_atual
             total_geral_paineis += total_paineis
@@ -1314,7 +1318,6 @@ def relatorio_maquinas_por_projeto(request):
         'total_geral_paineis': total_geral_paineis,
     }
     return render(request, 'quantidade_maquina_por_unidade.html', context)
-
 
 
 
