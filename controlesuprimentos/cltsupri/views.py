@@ -85,92 +85,106 @@ def cadastrar_equipamento(request, equipamento_id=None):
 id = 0
 @login_required(login_url='login')
 def pesquisa(request):
-    entregas_ordenadas = EntregaSuprimento.objects.all().order_by('data')
-    form_projeto = Projeto.objects.all()
-    form_unidades = Unidade.objects.all()
 
+    # --- CAPTURAR FILTROS (GET) ---
+    projeto_id = request.GET.get('projeto')
+    unidade_id = request.GET.get('unidade')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
+
+    # --- LISTAS PARA OS SELECT ---
+    form_projeto = Projeto.objects.all().order_by('nome')
+
+    if projeto_id:
+        form_unidades = Unidade.objects.filter(projeto_id=projeto_id).order_by('nome')
+    else:
+        form_unidades = Unidade.objects.none()
+
+    # --- CONSULTA PRINCIPAL ---
+    entregas = EntregaSuprimento.objects.all().select_related('unidade', 'suprimento').order_by('-data')
+
+    if projeto_id:
+        entregas = entregas.filter(unidade__projeto_id=projeto_id)
+
+    if unidade_id:
+        entregas = entregas.filter(unidade_id=unidade_id)
+
+    if data_inicio:
+        entregas = entregas.filter(data__gte=data_inicio)
+
+    if data_fim:
+        entregas = entregas.filter(data__lte=data_fim)
+
+    # --- SE CLICAR NA LINHA, REDIRECIONA ---
     if request.method == 'POST':
         entrega_id = request.POST.get("entrega_id")
-        is_pesquisa = request.POST.get("btn-pesquisar")  # só vem se o botão de filtro for clicado
-
-        if entrega_id and not is_pesquisa:
-            print(f"ID da entrega clicada: {entrega_id}")
+        if entrega_id:
             request.session['entrega_id'] = entrega_id
-            return redirect('pesquisa_entrega')
-            # Aqui você pode redirecionar, mostrar detalhes, etc.
-            # Exemplo: return redirect('detalhes_entrega', pk=entrega_id)
+            return redirect("pesquisa_entrega")
 
-        else:
-            # Filtros via formulário
-            valor_projeto = request.POST.get('projeto')
-            valor_unidade = request.POST.get('unidade')
-            data_inicio = request.POST.get('data_inicio')
-            data_fim = request.POST.get('data_fim')
-
-            print(f"Projeto Selecionado: {valor_projeto}")
-            print(f"Unidade Selecionada: {valor_unidade}")
-            print(f"Data Início: {data_inicio}")
-            print(f"Data Fim: {data_fim}")
-
-            if valor_projeto:
-                entregas_ordenadas = entregas_ordenadas.filter(unidade__projeto_id=valor_projeto)
-            if valor_unidade:
-                entregas_ordenadas = entregas_ordenadas.filter(unidade_id=valor_unidade)
-            if data_inicio:
-                entregas_ordenadas = entregas_ordenadas.filter(data__gte=data_inicio)
-            if data_fim:
-                entregas_ordenadas = entregas_ordenadas.filter(data__lte=data_fim)
-
-    return render(request, 'pesquisa.html', {
-        'form': entregas_ordenadas,
-        'form_projeto': form_projeto,
-        'form_unidades': form_unidades
+    return render(request, "pesquisa.html", {
+        "form": entregas,
+        "form_projeto": form_projeto,
+        "form_unidades": form_unidades,
+        "projeto_id": projeto_id,
+        "unidade_id": unidade_id,
+        "data_inicio": data_inicio,
+        "data_fim": data_fim,
     })
+
 
 @login_required(login_url='login')
 def total_unidade(request):
-    entregas_ordenadas = EntregaSuprimento.objects.all().order_by('data')
-    form_projeto = Projeto.objects.all()
-    form_unidades = Unidade.objects.all()
-    if request.method == 'POST':
-        valor_projeto = request.POST.get('projeto')  # Captura o valor do campo 'projeto'
-        valor_unidade = request.POST.get('unidade')  # Captura o valor do campo 'unidade'
-        data_inicio = request.POST.get('data_inicio')
-        data_fim = request.POST.get('data_fim')
 
-        # Imprimir para teste
-        print(f"Projeto Selecionado: {valor_projeto}")
-        print(f"Unidade Selecionada: {valor_unidade}")
-        print(f"Data Início: {data_inicio}")
-        print(f"Data Fim: {data_fim}")
+    projeto_id = request.GET.get('projeto')
+    unidade_id = request.GET.get('unidade')
+    data_inicio = request.GET.get('data_inicio')
+    data_fim = request.GET.get('data_fim')
 
-        # Filtrar entregas com base nos valores capturados
-        if valor_projeto:
-            entregas_ordenadas = entregas_ordenadas.filter(unidade__projeto_id=valor_projeto)
-        if valor_unidade:
-            entregas_ordenadas = entregas_ordenadas.filter(unidade_id=valor_unidade)
-        if data_inicio:
-            entregas_ordenadas = entregas_ordenadas.filter(data__gte=data_inicio)
-        if data_fim:
-            entregas_ordenadas = entregas_ordenadas.filter(data__lte=data_fim)
+    form_projeto = Projeto.objects.all().order_by('nome')
+
+    # Carregar somente unidades do projeto selecionado
+    if projeto_id:
+        form_unidades = Unidade.objects.filter(projeto_id=projeto_id).order_by('nome')
     else:
-        for entrega in entregas_ordenadas:
-            #print(entrega)
-            pass
+        form_unidades = Unidade.objects.none()
 
+    entregas = EntregaSuprimento.objects.all().select_related('unidade').order_by('data')
+
+    # Aplica filtros
+    if projeto_id:
+        entregas = entregas.filter(unidade__projeto_id=projeto_id)
+
+    if unidade_id:
+        entregas = entregas.filter(unidade_id=unidade_id)
+
+    if data_inicio:
+        entregas = entregas.filter(data__gte=data_inicio)
+
+    if data_fim:
+        entregas = entregas.filter(data__lte=data_fim)
+
+    # Montar lista
     lista = {}
     total = 0
-    for entrega in entregas_ordenadas:
-        if entrega.unidade.nome not in lista:
-            lista[entrega.unidade.nome] = 0
-        lista[entrega.unidade.nome] += entrega.quantidade_entregue
+    for entrega in entregas:
+        nome = entrega.unidade.nome
+        lista[nome] = lista.get(nome, 0) + entrega.quantidade_entregue
         total += entrega.quantidade_entregue
 
-    print(lista)
-    ordenado = {k: lista[k] for k in sorted(lista)}
-    lista = ordenado
+    lista = dict(sorted(lista.items()))
 
-    return render(request,'total_unidade.html',{'form': entregas_ordenadas,'form_projeto':form_projeto,'form_unidades':form_unidades,'lista':lista,'total':total} )
+    return render(request, 'total_unidade.html', {
+        'form_projeto': form_projeto,
+        'form_unidades': form_unidades,
+        'lista': lista,
+        'total': total,
+
+        'projeto_id': projeto_id,
+        'unidade_id': unidade_id,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+    })
 
 
 # Create your views here.
@@ -1251,7 +1265,7 @@ def relatorio_maquinas_por_projeto(request):
     total_geral_paineis = 0
 
     if projeto_id:
-        unidades = Unidade.objects.filter(projeto_id=projeto_id)
+        unidades = Unidade.objects.filter(projeto_id=projeto_id).order_by('nome')
 
         for unidade in unidades:
             # Quantidade atual de máquinas (sem painéis)

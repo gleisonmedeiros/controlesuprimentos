@@ -1,64 +1,149 @@
 {% extends 'index.html' %}
+{% load static %}
 
 {% block content %}
 
-<form class="row g-3" method="POST">
-  {% csrf_token %}
-    <!-- Linha 1: Projeto e Nome da Unidade -->
-    <div class="col-md-6">
-         <label for="form_projeto">Projeto</label>
-        <select name="projeto" id="myprojeto" class="form-control">
-    <option value="">Selecione um Projeto</option>
-    {% for projeto in form_projeto %}
-        <option value="{{ projeto.id }}">{{ projeto.nome }}</option>
-    {% endfor %}
-</select>
-    </div>
-    <div class="col-md-6">
-        <div class="form-group">
-        <label for="form_unidade">Unidade</label>
-        <select name="unidade" id="myunidade" class="form-control">
-    <option value="">Selecione uma Unidade</option>
-    {% for unidade in form_unidades %}
-        <option value="{{ unidade.id }}">{{ unidade.nome }}</option>
-    {% endfor %}
-</select>
+<h5>Consulta de Entregas por Unidade</h5>
+
+<form method="GET" id="filter-form" class="mb-4">
+
+    <!-- PROJETO (SEM SELECT2) -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label>Projeto</label>
+            <select name="projeto" id="id_projeto" class="form-control">
+                <option value="">Selecione um Projeto</option>
+                {% for projeto in form_projeto %}
+                    <option value="{{ projeto.id }}"
+                        {% if projeto_id == projeto.id|stringformat:"s" %}selected{% endif %}>
+                        {{ projeto.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- UNIDADE (COM SELECT2) -->
+        <div class="col-md-6">
+            <label>Unidade</label>
+            <select name="unidade" id="id_unidade" class="form-control"
+                    {% if not projeto_id %}disabled{% endif %}>
+                <option value="">Selecione uma Unidade</option>
+                {% for unidade in form_unidades %}
+                    <option value="{{ unidade.id }}"
+                        {% if unidade_id == unidade.id|stringformat:"s" %}selected{% endif %}>
+                        {{ unidade.nome }}
+                    </option>
+                {% endfor %}
+            </select>
         </div>
     </div>
 
-    <!-- Linha 2: Data Início e Data Fim -->
-    <div class="col-md-6">
-        <label for="data_inicio" class="form-label">Data Início</label>
-        <input type="date" class="form-control" id="data_inicio" name="data_inicio">
-    </div>
-    <div class="col-md-6">
-        <label for="data_fim" class="form-label">Data Fim</label>
-        <input type="date" class="form-control" id="data_fim" name="data_fim">
+    <!-- Datas -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label>Data Início</label>
+            <input type="date" name="data_inicio" class="form-control" value="{{ data_inicio }}">
+        </div>
+
+        <div class="col-md-6">
+            <label>Data Fim</label>
+            <input type="date" name="data_fim" class="form-control" value="{{ data_fim }}">
+        </div>
     </div>
 
-    <!-- Botão de Pesquisa -->
-    <div class="col-md-12 text-end mt-3">
-        <input type="submit" class="btn btn-primary" value="Pesquisar"></input>
-    </div>
+    <button class="btn btn-primary mt-2">Pesquisar</button>
+
 </form>
-<label for="form_projeto"><H5>Total de Toners entregues: <b>{{ total }}</b></H5></label>
+
+<hr>
+
+<h5>Total de Toners entregues: <b>{{ total }}</b></h5>
+
+<!-- TABELA -->
 <table class="table table-striped table-hover">
-  <thead>
-    <tr>
-      <th scope="col">#</th>
-      <th scope="col">UNIDADE</th>
-      <th scope="col">QTD ENTREGUE</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for chave, valor in lista.items %}
-    <tr>
-      <th scope="row">{{ forloop.counter }}</th>
-      <td>{{ chave }}</td>
-      <td>{{ valor }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
+    <thead class="table-dark">
+        <tr>
+            <th>#</th>
+            <th>Unidade</th>
+            <th>Qtd Entregue</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for chave, valor in lista.items %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ chave }}</td>
+                <td>{{ valor }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
 </table>
+
+<!-- Select2 + jQuery -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(function() {
+
+    /* --------------------------
+       SELECT2 SOMENTE EM UNIDADE
+    --------------------------- */
+    $('#id_unidade').select2({
+        width: '100%',
+        placeholder: 'Selecione uma Unidade',
+        allowClear: true
+    });
+
+    /* --------------------------
+       Habilita/desabilita unidade
+    --------------------------- */
+    {% if projeto_id %}
+        $('#id_unidade').prop('disabled', false);
+    {% else %}
+        $('#id_unidade').prop('disabled', true);
+    {% endif %}
+
+    /* ----------------------------------------
+       Submit automático ao mudar o PROJETO
+    ----------------------------------------- */
+    $('#id_projeto').on('change', function () {
+        if (!$(this).val()) {
+            $('#id_unidade').val('').trigger('change');
+            $('#id_unidade').prop('disabled', true);
+        }
+        $('#filter-form').submit();
+    });
+
+    /* ----------------------------------------
+       Cursor automático no campo de busca
+    ----------------------------------------- */
+    $('#id_unidade').on('select2:open', function () {
+        let interval = setInterval(function () {
+            let $input = $('.select2-container--open .select2-search__field');
+            if ($input.length) {
+                $input[0].focus();
+                clearInterval(interval);
+            }
+        }, 10);
+    });
+
+});
+</script>
+
+<style>
+.select2-container .select2-selection--single {
+    height: 38px !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 0.375rem !important;
+}
+.select2-selection__rendered {
+    line-height: 36px !important;
+}
+.select2-selection__arrow {
+    height: 36px !important;
+}
+</style>
 
 {% endblock %}
