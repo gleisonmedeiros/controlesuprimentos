@@ -533,7 +533,7 @@ def relatorio_toners(request):
     unidade_id = request.GET.get('unidade')
 
     projetos = Projeto.objects.all()
-    unidades = Unidade.objects.all()
+    unidades = Unidade.objects.all().order_by("nome")
 
     entregas = EntregaSuprimento.objects.all()
 
