@@ -1,93 +1,106 @@
 {% extends 'index.html' %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="card shadow-sm border-0 mb-4 mx-auto" style="max-width: 900px;">
+    <div class="card-body p-4">
+        <!-- Mensagens de sucesso ou erro -->
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
 
-  <!-- Mensagens de sucesso ou erro -->
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
+        <h5 class="card-title text-primary mb-4 fw-bold">
+            <i class="bi bi-link-45deg me-2"></i>{% if editando %} Editando Associação {% else %} Associar Unidade a Prefixo do Nome da Máquina {% endif %}
+        </h5>
 
-  <h5 class="mb-4">
-    {% if editando %} Editando Associação {% else %} Associar Unidade a Prefixo do Nome da Máquina {% endif %}
-  </h5>
+        <form method="post" class="mb-2">
+            {% csrf_token %}
 
-  <form method="post" class="mb-4">
-    {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger shadow-sm">{{ form.non_field_errors }}</div>
+            {% endif %}
 
-    {% if form.non_field_errors %}
-      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-    {% endif %}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="{{ form.prefixo_nome.id_for_label }}" class="form-label fw-medium">{{ form.prefixo_nome.label }}</label>
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-fonts"></i></span>
+                        {{ form.prefixo_nome }}
+                    </div>
+                    {% for error in form.prefixo_nome.errors %}
+                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                    {% endfor %}
+                </div>
 
-    <div class="row">
-      <div class="col-md-6 mb-3">
-        {{ form.prefixo_nome.label_tag }}
-        {{ form.prefixo_nome }}
-        {% for error in form.prefixo_nome.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
+                <div class="col-md-6">
+                    <label for="{{ form.unidade.id_for_label }}" class="form-label fw-medium">{{ form.unidade.label }}</label>
+                    {{ form.unidade }}
+                    {% for error in form.unidade.errors %}
+                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
 
-      <div class="col-md-6 mb-3">
-        {{ form.unidade.label_tag }}
-        {{ form.unidade }}
-        {% for error in form.unidade.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
+            <div class="d-flex gap-2 mt-4 pt-2">
+                <button type="submit" class="btn btn-primary px-4 fw-medium shadow-sm">
+                    <i class="bi bi-check-circle me-1"></i>{% if editando %} Salvar Alterações {% else %} Salvar Associação {% endif %}
+                </button>
+
+                {% if editando %}
+                <a href="{% url 'associar_unidade' %}" class="btn btn-light border px-4 fw-medium text-secondary">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar
+                </a>
+                {% endif %}
+            </div>
+        </form>
     </div>
+</div>
 
-    <div class="mt-3">
-      <button type="submit" class="btn btn-primary">
-        {% if editando %} Salvar Alterações {% else %} Salvar Associação {% endif %}
-      </button>
-
-      {% if editando %}
-        <a href="{% url 'associar_unidade' %}" class="btn btn-secondary ms-2">Cancelar</a>
-      {% endif %}
+<div class="card shadow-sm border-0 mx-auto" style="max-width: 900px;">
+    <div class="card-body p-4">
+        <h5 class="card-title text-secondary mb-4 fw-bold">Associações Existentes</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle border-top">
+                <thead class="table-light">
+                <tr>
+                    <th class="ps-3"><i class="bi bi-bookmark me-2"></i>Prefixo Nome</th>
+                    <th><i class="bi bi-building me-2"></i>Unidade</th>
+                    <th><i class="bi bi-folder me-2"></i>Projeto</th>
+                    <th class="text-end pe-3" style="width: 150px;">Ações</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for assoc in associacoes %}
+                <tr>
+                    <td class="ps-3"><span class="badge bg-secondary-subtle text-secondary border px-2 py-1 fs-6 font-monospace">{{ assoc.prefixo_nome }}</span></td>
+                    <td class="fw-bold">{{ assoc.unidade.nome }}</td>
+                    <td class="text-muted">{{ assoc.unidade.projeto.nome }}</td>
+                    <td class="text-end pe-3">
+                    <a href="{% url 'associar-unidade-action' assoc.id 'edit' %}" class="btn btn-sm btn-outline-warning me-1" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="{% url 'associar-unidade-action' assoc.id 'delete' %}" class="btn btn-sm btn-outline-danger" title="Excluir"
+                        onclick="return confirm('Deseja realmente excluir esta associação?');">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4 d-block mb-2"></i>Nenhuma associação cadastrada.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-  </form>
-
-  <hr>
-
-  <h5>Associações Existentes</h5>
-  <table class="table table-striped table-hover w-75">
-    <thead>
-      <tr>
-        <th>Prefixo Nome</th>
-        <th>Unidade</th>
-        <th>Projeto</th>
-        <th class="text-center">Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for assoc in associacoes %}
-      <tr>
-        <td>{{ assoc.prefixo_nome }}</td>
-        <td>{{ assoc.unidade.nome }}</td>
-        <td>{{ assoc.unidade.projeto.nome }}</td>
-        <td class="text-center">
-          <a href="{% url 'associar-unidade-action' assoc.id 'edit' %}" class="btn btn-sm btn-warning">Editar</a>
-          <a href="{% url 'associar-unidade-action' assoc.id 'delete' %}" class="btn btn-sm btn-danger"
-             onclick="return confirm('Deseja realmente excluir esta associação?');">Excluir</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="4" class="text-center text-muted">Nenhuma associação cadastrada.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
 </div>
 
 <!-- ====== 🔽 ADIÇÃO DO SELECT2 🔽 ====== -->
 <!-- CSS do Select2 -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
-<!-- jQuery + JS do Select2 -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
 $(document).ready(function() {
@@ -110,9 +123,19 @@ $(document).ready(function() {
   height: 38px !important;
   border: 1px solid #ced4da !important;
   border-radius: 0.375rem !important;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 .select2-selection__rendered {
   line-height: 36px !important;
+  padding-left: 0.75rem !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 36px !important;
+}
+/* Force inputs to mirror Bootstrap 5 */
+#id_prefixo_nome {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 </style>
 

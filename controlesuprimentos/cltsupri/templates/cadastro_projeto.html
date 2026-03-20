@@ -1,54 +1,80 @@
 {% extends 'index.html' %}
 
 {% block content %}
-<h5>{% if projeto_id %}Editar Projeto{% else %}Cadastro de Projeto{% endif %}</h5>
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4">
+        <h5 class="card-title text-primary mb-4 fw-bold">
+            <i class="bi bi-folder-plus me-2"></i>{% if projeto_id %}Editar Projeto{% else %}Cadastro de Projeto{% endif %}
+        </h5>
 
-<form method="POST" class="mb-4">
-    {% csrf_token %}
-    <div class="row mb-3">
-        <div class="col-md-6">
-            {{ form.nome.label_tag }}
-            {{ form.nome }}
-        </div>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <label for="{{ form.nome.id_for_label }}" class="form-label fw-medium">{{ form.nome.label }}</label>
+                    {{ form.nome }}
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary px-4 fw-medium shadow-sm">
+                    <i class="bi bi-check-circle me-1"></i>{% if projeto_id %}Salvar{% else %}Cadastrar{% endif %}
+                </button>
+                {% if projeto_id %}
+                    <a href="{% url 'criar_projeto' %}" class="btn btn-light border px-4 fw-medium text-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
+                    </a>
+                {% endif %}
+            </div>
+        </form>
     </div>
-    <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">
-            {% if projeto_id %}Salvar{% else %}Cadastrar{% endif %}
-        </button>
-        {% if projeto_id %}
-            <a href="{% url 'criar_projeto' %}" class="btn btn-secondary">Cancelar</a>
-        {% endif %}
-    </div>
-</form>
+</div>
 
 {% for error in errors %}
-    <div class="alert alert-danger" role="alert">{{ error }}</div>
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 {% endfor %}
 
-<h5>Projetos Cadastrados</h5>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Nome</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for proj in projetos %}
-            <tr>
-                <td>{{ proj.nome }}</td>
-                <td>
-                    <a href="{% url 'criar_projeto_editar' proj.id %}" class="btn btn-sm btn-warning">Editar</a>
-                    <form method="post" style="display:inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="delete" value="{{ proj.id }}">
-                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Deseja realmente excluir este projeto?')">Excluir</button>
-                    </form>
-                </td>
-            </tr>
-        {% empty %}
-            <tr><td colspan="2">Nenhum projeto cadastrado.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <h5 class="card-title text-secondary mb-4 fw-bold">Projetos Cadastrados</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle border-top">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Nome</th>
+                        <th class="text-end pe-3" style="width: 150px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proj in projetos %}
+                        <tr>
+                            <td class="ps-3 fw-medium text-dark">{{ proj.nome }}</td>
+                            <td class="text-end pe-3">
+                                <a href="{% url 'criar_projeto_editar' proj.id %}" class="btn btn-sm btn-outline-warning me-1" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="post" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="delete" value="{{ proj.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir" onclick="return confirm('Deseja realmente excluir este projeto?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-4 d-block mb-2"></i>Nenhum projeto cadastrado.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -1264,6 +1264,9 @@ def relatorio_maquinas_por_projeto(request):
     total_geral_atual = 0
     total_geral_paineis = 0
 
+    equipamentos_totais_previstos = '-'
+    equipamentos_totais_atuais = '-'
+
     if projeto_id:
         unidades = Unidade.objects.filter(projeto_id=projeto_id).order_by('nome')
 
@@ -1323,6 +1326,37 @@ def relatorio_maquinas_por_projeto(request):
             total_geral_atual += qtd_atual
             total_geral_paineis += total_paineis
 
+        # --- Totais Gerais de Equipamentos por Projeto ---
+        totais_previstos = (
+            ConsolidadoEquipamento.objects
+            .filter(projeto_id=projeto_id)
+            .values('equipamento__nome', 'equipamento__tipo')
+            .annotate(total=Sum('quantidade'))
+            .order_by('equipamento__nome', 'equipamento__tipo')
+        )
+        equipamentos_totais_previstos = ', '.join([
+            f"{item['equipamento__nome']} ({item['equipamento__tipo']}) {item['total']}"
+            for item in totais_previstos
+        ]) if totais_previstos else '-'
+
+        totais_atuais = (
+            Equipamento.objects
+            .filter(unidade__projeto_id=projeto_id)
+            .values('nome', 'tipo')
+            .annotate(total=Count('id'))
+            .order_by('nome', 'tipo')
+        )
+        equipamentos_totais_atuais = ', '.join([
+            f"{item['nome'].replace('IMPRESSORA', '🖨️')} ({item['tipo']}) {item['total']}"
+            for item in totais_atuais
+        ]) if totais_atuais else '-'
+
+        equipamentos_totais_atuais = (
+            equipamentos_totais_atuais
+            .replace('(MULTIFUNCIONAL)', '(MULTI)')
+            .replace('TÉRMICA (BOLETO)', '(TÉRMICA)')
+        )
+
     context = {
         'projetos': projetos,
         'projeto_id': projeto_id,
@@ -1330,6 +1364,8 @@ def relatorio_maquinas_por_projeto(request):
         'total_geral_prevista': total_geral_prevista,
         'total_geral_atual': total_geral_atual,
         'total_geral_paineis': total_geral_paineis,
+        'equipamentos_totais_previstos': equipamentos_totais_previstos,
+        'equipamentos_totais_atuais': equipamentos_totais_atuais,
     }
     return render(request, 'quantidade_maquina_por_unidade.html', context)
 

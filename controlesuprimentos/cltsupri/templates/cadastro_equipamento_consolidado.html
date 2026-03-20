@@ -1,136 +1,164 @@
 {% extends 'index.html' %}
 
 {% block content %}
-<h5>{% if equipamento_id %}Editar Equipamento{% else %}Cadastro de Equipamento{% endif %}</h5>
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4">
+        <h5 class="card-title text-primary mb-4 fw-bold">
+            <i class="bi bi-keyboard me-2"></i>{% if equipamento_id %}Editar Equipamento{% else %}Cadastro Manual de Equipamento{% endif %}
+        </h5>
 
-<form method="POST" class="mb-4">
-    {% csrf_token %}
+        <form method="POST">
+            {% csrf_token %}
 
-    <!-- Projeto / Unidade / Setor -->
-    <div class="row mb-3">
-        <div class="col-md-4">
-            <label for="id_projeto">Projeto</label>
-            <select name="projeto" id="id_projeto" class="form-control">
-                <option value="">Selecione um Projeto</option>
-                {% for projeto in projetos %}
-                    <option value="{{ projeto.id }}" {% if selected_projeto == projeto.id|stringformat:"s" %}selected{% endif %}>
-                        {{ projeto.nome }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
+            <div class="bg-light p-3 rounded-3 border mb-4">
+                <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-geo-alt me-2"></i>Localização e Setor</h6>
+                <!-- Projeto / Unidade / Setor -->
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="id_projeto" class="form-label fw-medium">Projeto</label>
+                        <select name="projeto" id="id_projeto" class="form-select shadow-sm">
+                            <option value="">Selecione um Projeto</option>
+                            {% for projeto in projetos %}
+                                <option value="{{ projeto.id }}" {% if selected_projeto == projeto.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ projeto.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        <div class="col-md-4">
-            <label for="id_unidade">Unidade</label>
-            <select name="unidade" id="id_unidade" class="form-control select2-field">
-                <option value="">Selecione uma Unidade</option>
-                {% for unidade in unidades %}
-                    <option value="{{ unidade.id }}" {% if selected_unidade == unidade.id|stringformat:"s" %}selected{% endif %}>
-                        {{ unidade.projeto.nome }} - {{ unidade.nome }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
+                    <div class="col-md-4">
+                        <label for="id_unidade" class="form-label fw-medium">Unidade</label>
+                        <select name="unidade" id="id_unidade" class="form-control select2-field shadow-sm">
+                            <option value="">Selecione uma Unidade</option>
+                            {% for unidade in unidades %}
+                                <option value="{{ unidade.id }}" {% if selected_unidade == unidade.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ unidade.projeto.nome }} - {{ unidade.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        <div class="col-md-4">
-            <label for="id_setor">Setor</label>
-            <input type="text" name="setor" id="id_setor" class="form-control" value="{{ form.setor.value|default_if_none:'' }}">
-        </div>
+                    <div class="col-md-4">
+                        <label for="id_setor" class="form-label fw-medium">Setor</label>
+                        <input type="text" name="setor" id="id_setor" class="form-control shadow-sm" value="{{ form.setor.value|default_if_none:'' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                     <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-upc-scan me-2"></i>Identificação</h6>
+                </div>
+                <!-- Patrimônio / Marca / Modelo -->
+                <div class="col-md-4">
+                    <label for="id_patrimonio" class="form-label fw-medium">Patrimônio</label>
+                    <input type="text" name="patrimonio" id="id_patrimonio" class="form-control shadow-sm" value="{{ form.patrimonio.value|default_if_none:'' }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label for="id_marca" class="form-label fw-medium">Marca</label>
+                    <input type="text" name="marca" id="id_marca" class="form-control shadow-sm" value="{{ form.marca.value|default_if_none:'' }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label for="id_modelo" class="form-label fw-medium">Modelo</label>
+                    <input type="text" name="modelo" id="id_modelo" class="form-control shadow-sm" value="{{ form.modelo.value|default_if_none:'' }}">
+                </div>
+
+                <!-- Nome / Tipo -->
+                <div class="col-md-6 mt-4">
+                    <label for="id_nome" class="form-label fw-medium">Nome (Tipo de Equipamento)</label>
+                    <select id="id_nome" class="form-select shadow-sm">
+                        <option value="">Selecione o Nome</option>
+                        {% for eq in equipamentos_cadastro %}
+                            <option value="{{ eq.id }}" data-nome="{{ eq.nome }}" data-tipo="{{ eq.tipo }}"
+                                {% if form.nome.value == eq.nome and form.tipo.value == eq.tipo %}selected{% endif %}>
+                                {{ eq.nome }}{% if eq.tipo %} ({{ eq.tipo }}){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <input type="hidden" name="nome" id="hidden_nome" value="{{ form.nome.value|default_if_none:'' }}">
+            <input type="hidden" name="tipo" id="hidden_tipo" value="{{ form.tipo.value|default_if_none:'' }}">
+
+            <script>
+            document.getElementById('id_nome').addEventListener('change', function() {
+                const opt = this.options[this.selectedIndex];
+                document.getElementById('hidden_nome').value = opt.dataset.nome || '';
+                document.getElementById('hidden_tipo').value = opt.dataset.tipo || '';
+            });
+            </script>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary px-4 fw-medium shadow-sm">
+                    <i class="bi bi-check-circle me-1"></i>{% if equipamento_id %}Salvar Alterações{% else %}Cadastrar Equipamento{% endif %}
+                </button>
+                {% if equipamento_id %}
+                    <a href="{% url 'cadastro_equipamento_consolidado' %}" class="btn btn-light border px-4 fw-medium text-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancelar Edição
+                    </a>
+                {% endif %}
+            </div>
+        </form>
     </div>
-
-    <!-- Patrimônio / Marca / Modelo -->
-    <div class="row mb-3">
-        <div class="col-md-4">
-            <label for="id_patrimonio">Patrimônio</label>
-            <input type="text" name="patrimonio" id="id_patrimonio" class="form-control" value="{{ form.patrimonio.value|default_if_none:'' }}">
-        </div>
-
-        <div class="col-md-4">
-            <label for="id_marca">Marca</label>
-            <input type="text" name="marca" id="id_marca" class="form-control" value="{{ form.marca.value|default_if_none:'' }}">
-        </div>
-
-        <div class="col-md-4">
-            <label for="id_modelo">Modelo</label>
-            <input type="text" name="modelo" id="id_modelo" class="form-control" value="{{ form.modelo.value|default_if_none:'' }}">
-        </div>
-    </div>
-
-    <!-- Nome / Tipo -->
-    <div class="col-md-4 mb-3">
-        <label for="id_nome">Nome</label>
-        <select id="id_nome" class="form-control">
-            <option value="">Selecione o Nome</option>
-            {% for eq in equipamentos_cadastro %}
-                <option value="{{ eq.id }}" data-nome="{{ eq.nome }}" data-tipo="{{ eq.tipo }}"
-                    {% if form.nome.value == eq.nome and form.tipo.value == eq.tipo %}selected{% endif %}>
-                    {{ eq.nome }}{% if eq.tipo %} ({{ eq.tipo }}){% endif %}
-                </option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <input type="hidden" name="nome" id="hidden_nome" value="{{ form.nome.value|default_if_none:'' }}">
-    <input type="hidden" name="tipo" id="hidden_tipo" value="{{ form.tipo.value|default_if_none:'' }}">
-
-    <script>
-    document.getElementById('id_nome').addEventListener('change', function() {
-        const opt = this.options[this.selectedIndex];
-        document.getElementById('hidden_nome').value = opt.dataset.nome || '';
-        document.getElementById('hidden_tipo').value = opt.dataset.tipo || '';
-    });
-    </script>
-
-    <div class="d-flex gap-2 mb-3">
-        <button type="submit" class="btn btn-primary">{% if equipamento_id %}Salvar Alterações{% else %}Cadastrar Equipamento{% endif %}</button>
-        {% if equipamento_id %}
-            <a href="{% url 'cadastro_equipamento_consolidado' %}" class="btn btn-secondary">Cancelar Edição</a>
-        {% endif %}
-    </div>
-</form>
+</div>
 
 <!-- Tabela de equipamentos -->
-<h5>Equipamentos cadastrados</h5>
-<table class="table table-striped">
-    <thead class="table-dark">
-        <tr>
-            <th>Projeto</th>
-            <th>Unidade</th>
-            <th>Setor</th>
-            <th>Nome</th>
-            <th>Patrimônio</th>
-            <th>Marca</th>
-            <th>Modelo</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for equipamento in equipamentos %}
-            <tr>
-                <td>{{ equipamento.unidade.projeto.nome }}</td>
-                <td>{{ equipamento.unidade.nome }}</td>
-                <td>{{ equipamento.setor }}</td>
-                <td>{{ equipamento.nome }}{% if equipamento.tipo %} ({{ equipamento.tipo }}){% endif %}</td>
-                <td>{{ equipamento.patrimonio }}</td>
-                <td>{{ equipamento.marca }}</td>
-                <td>{{ equipamento.modelo }}</td>
-                <td class="d-flex gap-1">
-                    <a href="{% url 'cadastro_equipamento_editar' equipamento.id %}" class="btn btn-sm btn-warning">Editar</a>
-                    <form action="{% url 'cadastro_equipamento_editar' equipamento.id %}" method="POST" style="display:inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="excluir" value="1">
-                        <button type="submit" class="btn btn-sm btn-danger"
-                                onclick="return confirm('Tem certeza que deseja excluir este equipamento?');">
-                            Excluir
-                        </button>
-                    </form>
-                </td>
-            </tr>
-        {% empty %}
-            <tr><td colspan="8">Nenhum equipamento cadastrado.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <h5 class="card-title text-secondary mb-4 fw-bold">Equipamentos Consolidados Cadastrados</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle border-top">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Projeto</th>
+                        <th>Unidade</th>
+                        <th>Setor</th>
+                        <th>Nome</th>
+                        <th>Patrimônio</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th class="text-end pe-3" style="width: 150px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for equipamento in equipamentos %}
+                        <tr>
+                            <td class="ps-3 fw-medium text-muted">{{ equipamento.unidade.projeto.nome }}</td>
+                            <td class="fw-bold">{{ equipamento.unidade.nome }}</td>
+                            <td>{{ equipamento.setor }}</td>
+                            <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fs-6">{{ equipamento.nome }}{% if equipamento.tipo %} ({{ equipamento.tipo }}){% endif %}</span></td>
+                            <td class="font-monospace text-secondary">{{ equipamento.patrimonio }}</td>
+                            <td>{{ equipamento.marca }}</td>
+                            <td>{{ equipamento.modelo }}</td>
+                            <td class="text-end pe-3">
+                                <a href="{% url 'cadastro_equipamento_editar' equipamento.id %}" class="btn btn-sm btn-outline-warning me-1" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form action="{% url 'cadastro_equipamento_editar' equipamento.id %}" method="POST" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="excluir" value="1">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir"
+                                            onclick="return confirm('Tem certeza que deseja excluir este equipamento?');">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-4 d-block mb-2"></i>Nenhum equipamento cadastrado.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 <!-- Auto submit ao mudar projeto -->
 <script>
@@ -141,8 +169,6 @@ document.getElementById('id_projeto').addEventListener('change', function() {
 
 <!-- Select2 (para busca automática em Unidade) -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
 $(document).ready(function() {
@@ -164,9 +190,14 @@ $(document).ready(function() {
   height: 38px !important;
   border: 1px solid #ced4da !important;
   border-radius: 0.375rem !important;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 .select2-selection__rendered {
   line-height: 36px !important;
+  padding-left: 0.75rem !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 36px !important;
 }
 </style>
 

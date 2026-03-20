@@ -1,97 +1,126 @@
 {% extends 'index.html' %}
 
 {% block content %}
-<h5 class="mb-3">Quantidade de Máquinas por Unidade</h5>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="text-primary fw-bold mb-0">
+        <i class="bi bi-bar-chart-steps me-2"></i>Quantidade de Máquinas por Unidade
+    </h4>
+</div>
 
-<form method="get" class="mb-4">
-  <div class="row g-3 align-items-end">
-    <div class="col-md-4">
-      <label for="projeto" class="form-label">Projeto</label><br>
-      <small>
-        <select name="projeto" id="projeto" class="form-select" onchange="this.form.submit()">
-          <option value="">-- Selecione --</option>
-          {% for projeto in projetos %}
-            <option value="{{ projeto.id }}" {% if projeto.id|stringformat:"s" == projeto_id %}selected{% endif %}>
-              {{ projeto.nome }}
-            </option>
-          {% endfor %}
-        </select>
-      </small>
+<!-- Filtros Card -->
+<div class="card shadow-sm border-0 mb-4 bg-light">
+    <div class="card-body p-4">
+        <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-funnel me-2"></i>Filtro por Projeto</h6>
+        
+        <form method="get">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="projeto" class="form-label fw-medium small mb-1">Projeto</label>
+                    <select name="projeto" id="projeto" class="form-select shadow-sm" onchange="this.form.submit()">
+                        <option value="">-- Selecione um Projeto --</option>
+                        {% for projeto in projetos %}
+                            <option value="{{ projeto.id }}" {% if projeto.id|stringformat:"s" == projeto_id %}selected{% endif %}>
+                                {{ projeto.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
     </div>
-  </div>
-</form>
+</div>
 
 {% if unidades_data %}
-<div class="d-flex gap-3 flex-wrap">
+<div class="row g-4 mb-4">
+    
+    <!-- Tabela 1: Equipamentos Previstos -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                <h5 class="fw-bold text-secondary mb-0"><i class="bi bi-clipboard-data me-2"></i>Equipamentos Previstos</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border-top mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th nowrap class="ps-3">Unidade</th>
+                                <th nowrap class="text-center">Computadores</th>
+                                <th>Equipamentos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in unidades_data %}
+                            <tr>
+                                <td nowrap class="fw-bold ps-3">{{ item.unidade }}</td>
+                                <td nowrap align="center"><span class="badge bg-secondary-subtle text-secondary border px-2 py-1">{{ item.qtd_prevista }}</span></td>
+                                <td class="text-muted small">{{ item.equipamentos_previstos }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-light" style="border-top: 2px solid #dee2e6;">
+                                <td nowrap class="fw-bold ps-3 text-uppercase">Total Geral</td>
+                                <td nowrap align="center"><span class="badge bg-dark px-3 py-2 fs-6 rounded-pill">{{ total_geral_prevista }}</span></td>
+                                <td class="text-muted small fw-bold">{{ equipamentos_totais_previstos }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  <!-- Tabela 1: Unidade | QTD Prevista | Equipamentos Previstos -->
-  <div>
-    <h6>Equipamentos Previstos</h6>
-    <table class="table table-bordered table-striped table-sm mb-0">
-      <thead class="table-light">
-        <tr>
-          <th nowrap>Unidade</th>
-          <th nowrap>Computadores</th>
-          <th>Equipamentos</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in unidades_data %}
-        <tr>
-          <td nowrap>{{ item.unidade }}</td>
-          <td nowrap align="center">{{ item.qtd_prevista }}</td>
-          <td>{{ item.equipamentos_previstos }}</td>
-        </tr>
-        {% endfor %}
-        <tr class="fw-bold table-secondary">
-          <td nowrap>Total geral</td>
-          <td nowrap align="center">{{ total_geral_prevista }}</td>
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Tabela 2: QTD Atual | Equipamentos Atuais | Painéis -->
-  <div>
-    <h6>Equipamentos Atuais</h6>
-    <table class="table table-bordered table-striped table-sm mb-0">
-      <thead class="table-light">
-        <tr>
-          <th nowrap>Computadores</th>
-          <th>Equipamentos</th>
-          <th nowrap>Painéis</th>
-        </tr>
-      </thead>
-      <tbody>
-  {% for item in unidades_data %}
-  <tr>
-    <td nowrap align="center"
-      {% if item.qtd_atual == item.qtd_prevista %}
-        class="table-success"
-      {% elif item.qtd_atual < item.qtd_prevista %}
-        class="table-danger"
-      {% else %}
-        class="table-warning"
-      {% endif %}
-    >
-      {{ item.qtd_atual }}
-    </td>
-    <td>{{ item.equipamentos_atuais }}</td>
-    <td nowrap align="center">{{ item.total_paineis }}</td>
-  </tr>
-  {% endfor %}
-  <tr class="fw-bold table-secondary">
-    <td nowrap align="center">{{ total_geral_atual }}</td>
-    <td></td>
-    <td nowrap align="center">{{ total_geral_paineis }}</td>
-  </tr>
-</tbody>
-    </table>
-  </div>
+    <!-- Tabela 2: Equipamentos Atuais -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                <h5 class="fw-bold text-secondary mb-0"><i class="bi bi-pc-display me-2"></i>Equipamentos Atuais</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border-top mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th nowrap class="text-center ps-3">Computadores</th>
+                                <th>Equipamentos</th>
+                                <th nowrap class="text-center">Painéis</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in unidades_data %}
+                            <tr>
+                                <td nowrap align="center" class="ps-3">
+                                    {% if item.qtd_atual == item.qtd_prevista %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 w-100">{{ item.qtd_atual }}</span>
+                                    {% elif item.qtd_atual < item.qtd_prevista %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1 w-100">{{ item.qtd_atual }}</span>
+                                    {% else %}
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1 w-100">{{ item.qtd_atual }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted small">{{ item.equipamentos_atuais }}</td>
+                                <td nowrap align="center"><span class="badge bg-info-subtle text-info border px-2 py-1">{{ item.total_paineis }}</span></td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-light" style="border-top: 2px solid #dee2e6;">
+                                <td nowrap align="center" class="ps-3"><span class="badge bg-dark px-3 py-2 fs-6 rounded-pill">{{ total_geral_atual }}</span></td>
+                                <td class="text-muted small fw-bold">{{ equipamentos_totais_atuais }}</td>
+                                <td nowrap align="center"><span class="badge bg-secondary px-3 py-2 fs-6 rounded-pill">{{ total_geral_paineis }}</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </div>
 {% elif projeto_id %}
-  <div class="alert alert-info">Nenhuma unidade encontrada para este projeto.</div>
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body p-5 text-center text-muted border border-dashed rounded">
+            <i class="bi bi-buildings fs-1 d-block mb-3 opacity-50"></i>
+            <h5>Nenhuma unidade encontrada</h5>
+            <p class="mb-0">Não existem unidades vinculadas a este projeto no momento.</p>
+        </div>
+    </div>
 {% endif %}
 {% endblock %}

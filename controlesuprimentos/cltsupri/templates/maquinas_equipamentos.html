@@ -1,218 +1,247 @@
 {% extends 'index.html' %}
 
 {% block content %}
-<h5 class="mb-3">Inventário de Máquinas e Equipamentos</h5>
-
-<div class="row g-3 align-items-end mb-4">
-<form method="get" class="col-md-10 row g-3 align-items-end">
-
-  <!-- Projeto -->
-  <div class="col-md-4">
-    <label for="projeto" class="form-label">Projeto</label>
-    <select name="projeto" id="projeto" class="form-select form-select-sm" onchange="this.form.submit()">
-      <option value="">Todos</option>
-      {% for p in projetos %}
-        <option value="{{ p.id }}" {% if filtros.projeto_id == p.id|stringformat:'s' %}selected{% endif %}>{{ p.nome }}</option>
-      {% endfor %}
-    </select>
-  </div>
-
-  <!-- Unidade -->
-  <div class="col-md-4">
-    <label for="unidade" class="form-label">Unidade Associada</label>
-    <select name="unidade" id="unidade" class="form-select form-select-sm">
-      <option value="">Todas</option>
-      {% for u in unidades %}
-        <option value="{{ u.id }}" {% if filtros.unidade_id == u.id|stringformat:'s' %}selected{% endif %}>{{ u.nome }}</option>
-      {% endfor %}
-    </select>
-  </div>
-
-  <!-- Status -->
-  <div class="col-md-4">
-    <label for="status" class="form-label">Status Máquina</label>
-    <select name="status" id="status" class="form-select form-select-sm">
-      <option value="">Todos</option>
-      <option value="ON" {% if filtros.status_maquina == "ON" %}selected{% endif %}>ON</option>
-      <option value="OFF" {% if filtros.status_maquina == "OFF" %}selected{% endif %}>OFF</option>
-    </select>
-  </div>
-
-  <!-- Tipo Equipamento -->
-  <div class="col-md-4">
-    <label for="tipo" class="form-label">Tipo Equipamento</label>
-    <select name="tipo" id="tipo" class="form-select form-select-sm">
-      <option value="">Todos</option>
-      <option value="impressora" {% if filtros.tipo_equipamento == "impressora" %}selected{% endif %}>Impressora</option>
-      <option value="tv" {% if filtros.tipo_equipamento == "tv" %}selected{% endif %}>TV</option>
-      <option value="outro" {% if filtros.tipo_equipamento == "outro" %}selected{% endif %}>Outro</option>
-    </select>
-  </div>
-
-  <!-- Tempo OFF -->
-  <div class="col-md-4">
-    <label for="tempo_off_min" class="form-label">Tempo OFF mínimo (dias)</label>
-    <input type="number" name="tempo_off_min" id="tempo_off_min" min="0"
-           class="form-control form-control-sm" value="{{ filtros.tempo_off_min }}">
-  </div>
-
-  <!-- Fornecedor -->
-  <div class="col-md-4">
-    <label for="fornecedor" class="form-label">Fornecedor Associado</label>
-    <select name="fornecedor" id="fornecedor" class="form-select form-select-sm">
-      <option value="">Todos</option>
-      {% for fornecedor in fornecedores %}
-        <option value="{{ fornecedor }}" {% if filtros.fornecedor_associado == fornecedor %}selected{% endif %}>{{ fornecedor }}</option>
-      {% endfor %}
-    </select>
-  </div>
-
-  <!-- Processador -->
-  <div class="col-md-4">
-    <label for="processador" class="form-label">Processador</label>
-    <select name="processador" id="processador" class="form-select form-select-sm" multiple>
-      {% for p in processadores %}
-        <option value="{{ p }}" {% if p in filtros.processador %}selected{% endif %}>{{ p }}</option>
-      {% endfor %}
-    </select>
-  </div>
-
-   <div class="col-md-4">
-  <label for="memoria" class="form-label">Memória RAM (GB)</label>
-  <select name="memoria" id="memoria" class="form-select form-select-sm">
-    <option value="">Todas</option>
-    {% for mem in memorias %}
-      <option value="{{ mem }}" {% if filtros.memoria == mem|stringformat:'s' %}selected{% endif %}>{{ mem|floatformat:0 }} GB</option>
-    {% endfor %}
-  </select>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="text-primary fw-bold mb-0">
+        <i class="bi bi-display me-2"></i>Inventário Geral de Máquinas e Equipamentos
+    </h4>
 </div>
 
-  <!-- Botões -->
-  <div class="col-md-6 col-lg-3">
-    <button type="submit" class="btn btn-primary btn-sm w-100">Filtrar</button>
-  </div>
+<!-- Filtros Card -->
+<div class="card shadow-sm border-0 mb-4 bg-light">
+    <div class="card-body p-4">
+        <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-funnel me-2"></i>Filtros de Pesquisa</h6>
+        <form method="get" id="filterForm">
+            <div class="row g-3">
+                <!-- Projeto -->
+                <div class="col-md-3 col-sm-6">
+                    <label for="projeto" class="form-label fw-medium small mb-1">Projeto</label>
+                    <select name="projeto" id="projeto" class="form-select form-select-sm shadow-sm" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    {% for p in projetos %}
+                        <option value="{{ p.id }}" {% if filtros.projeto_id == p.id|stringformat:'s' %}selected{% endif %}>{{ p.nome }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
 
-  <div class="col-md-6 col-lg-3">
-    <a href="{% url 'maquinas_equipamentos_por_unidade' %}" class="btn btn-secondary btn-sm w-100">Limpar</a>
-  </div>
-</form>
+                <!-- Unidade -->
+                <div class="col-md-3 col-sm-6">
+                    <label for="unidade" class="form-label fw-medium small mb-1">Unidade Associada</label>
+                    <select name="unidade" id="unidade" class="form-select form-select-sm shadow-sm">
+                    <option value="">Todas</option>
+                    {% for u in unidades %}
+                        <option value="{{ u.id }}" {% if filtros.unidade_id == u.id|stringformat:'s' %}selected{% endif %}>{{ u.nome }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
 
-  <!-- Apagar todas -->
-  <div class="col-md-2 text-end">
-    <form method="post" action="{% url 'apagar_todas_maquinas' %}">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-danger btn-sm"
-        onclick="return confirm('Tem certeza que deseja apagar todas as máquinas?')">APAGAR TODAS</button>
-    </form>
-  </div>
+                <!-- Status -->
+                <div class="col-md-2 col-sm-6">
+                    <label for="status" class="form-label fw-medium small mb-1">Status Máquina</label>
+                    <select name="status" id="status" class="form-select form-select-sm shadow-sm">
+                    <option value="">Todos</option>
+                    <option value="ON" {% if filtros.status_maquina == "ON" %}selected{% endif %}>ON</option>
+                    <option value="OFF" {% if filtros.status_maquina == "OFF" %}selected{% endif %}>OFF</option>
+                    </select>
+                </div>
 
-  <div class="col-md-6 col-lg-3">
-    <a href="{% url 'exportar_maquinas_excel' %}?projeto={{ filtros.projeto_id }}&unidade={{ filtros.unidade_id }}&status={{ filtros.status_maquina }}&tipo={{ filtros.tipo_equipamento }}&tempo_off_min={{ filtros.tempo_off_min }}&fornecedor={{ filtros.fornecedor_associado }}"
-       class="btn btn-success btn-sm w-100">Exportar Excel</a>
-  </div>
+                <!-- Tipo Equipamento -->
+                <div class="col-md-4 col-sm-6">
+                    <label for="tipo" class="form-label fw-medium small mb-1">Tipo Equipamento</label>
+                    <select name="tipo" id="tipo" class="form-select form-select-sm shadow-sm">
+                    <option value="">Todos</option>
+                    <option value="impressora" {% if filtros.tipo_equipamento == "impressora" %}selected{% endif %}>Impressora</option>
+                    <option value="tv" {% if filtros.tipo_equipamento == "tv" %}selected{% endif %}>TV</option>
+                    <option value="outro" {% if filtros.tipo_equipamento == "outro" %}selected{% endif %}>Outro</option>
+                    </select>
+                </div>
+
+                <!-- Fornecedor -->
+                <div class="col-md-3 col-sm-6">
+                    <label for="fornecedor" class="form-label fw-medium small mb-1">Fornecedor</label>
+                    <select name="fornecedor" id="fornecedor" class="form-select form-select-sm shadow-sm">
+                    <option value="">Todos</option>
+                    {% for fornecedor in fornecedores %}
+                        <option value="{{ fornecedor }}" {% if filtros.fornecedor_associado == fornecedor %}selected{% endif %}>{{ fornecedor }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Tempo OFF -->
+                <div class="col-md-2 col-sm-6">
+                    <label for="tempo_off_min" class="form-label fw-medium small mb-1">Tempo OFF mín</label>
+                    <input type="number" name="tempo_off_min" id="tempo_off_min" min="0" class="form-control form-control-sm shadow-sm" value="{{ filtros.tempo_off_min }}">
+                </div>
+
+                <!-- Processador -->
+                <div class="col-md-5 col-sm-12">
+                    <label for="processador" class="form-label fw-medium small mb-1">Processador</label>
+                    <select name="processador" id="processador" class="form-select form-select-sm shadow-sm d-none" multiple style="width: 100%;">
+                    {% for p in processadores %}
+                        <option value="{{ p }}" {% if p in filtros.processador %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Memória -->
+                <div class="col-md-2 col-sm-12">
+                    <label for="memoria" class="form-label fw-medium small mb-1">RAM (GB)</label>
+                    <select name="memoria" id="memoria" class="form-select form-select-sm shadow-sm">
+                        <option value="">Todas</option>
+                        {% for mem in memorias %}
+                        <option value="{{ mem }}" {% if filtros.memoria == mem|stringformat:'s' %}selected{% endif %}>{{ mem|floatformat:0 }} GB</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+            </div>
+        </form>
+
+        <hr class="text-secondary opacity-25 my-4">
+
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex gap-2">
+                <button type="submit" form="filterForm" class="btn btn-primary btn-sm px-4 shadow-sm fw-medium"><i class="bi bi-search me-1"></i>Filtrar</button>
+                <a href="{% url 'maquinas_equipamentos_por_unidade' %}" class="btn btn-light btn-sm px-4 border text-secondary fw-medium"><i class="bi bi-x-circle me-1"></i>Limpar Filtros</a>
+                <a href="{% url 'exportar_maquinas_excel' %}?projeto={{ filtros.projeto_id }}&unidade={{ filtros.unidade_id }}&status={{ filtros.status_maquina }}&tipo={{ filtros.tipo_equipamento }}&tempo_off_min={{ filtros.tempo_off_min }}&fornecedor={{ filtros.fornecedor_associado }}"
+                    class="btn btn-success btn-sm px-4 shadow-sm fw-medium">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+                </a>
+            </div>
+
+            <form method="post" action="{% url 'apagar_todas_maquinas' %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger btn-sm px-4 fw-bold shadow-sm"
+                    onclick="return confirm('ATENÇÃO: Tem certeza que deseja apagar todas as máquinas importadas via JSON?');">
+                    <i class="bi bi-trash-fill me-1"></i>Apagar Máquinas
+                </button>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- Tabela de máquinas -->
-{% if maquinas %}
-  <div class="table-responsive">
-    <table class="table table-striped table-hover table-sm small align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>Unidade</th>
-          <th>Nome</th>
-          <th>Tag</th>
-          <th>Sistema Operacional</th>
-          <th>Processador</th>
-          <th>RAM (GB)</th>
-          <th>Placa-mãe</th>
-          <th>Fabricante</th>
-          <th>Disco</th>
-          <th>Disco (GB)</th>
-          <th>Fornecedor</th>
-          <th>Tempo Offline</th>
-          <th>Status</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for m in maquinas %}
-          <tr class="{% if m.status == 'OFF' %}text-danger{% else %}text-success{% endif %}">
-            <td>{{ m.unidade_associada_display }}</td>
-            <td>{{ m.nome }}</td>
-            <td>{{ m.tag }}</td>
-            <td>{{ m.sistema_operacional }}</td>
-            <td>{{ m.processador }}</td>
-            <td>{{ m.memoria_total_display }}</td>
-            <td>{{ m.placa_mae }}</td>
-            <td>{{ m.fabricante_placa_mae }}</td>
-            <td>{{ m.disco }}</td>
-            <td>{{ m.tamanho_disco }}</td>
-            <td>{{ m.fornecedor_associado_display }}</td>
-            <td>{{ m.tempo_off_dias }}d {{ m.tempo_off_horas }}h {{ m.tempo_off_minutos }}m</td>
-            <td><strong>{{ m.status }}</strong></td>
-            <td>
-              <form method="post" action="{% url 'deletar_maquina' m.id %}" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger btn-sm"
-                        onclick="return confirm('Tem certeza que deseja excluir esta máquina?')">Apagar</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% else %}
-  <p>Nenhuma máquina encontrada.</p>
-{% endif %}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+        <h5 class="fw-bold text-secondary mb-0"><i class="bi bi-pc-display me-2"></i>Máquinas Registradas (Computadores)</h5>
+    </div>
+    <div class="card-body p-4">
+        {% if maquinas %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm small align-middle border">
+            <thead class="table-light">
+                <tr>
+                <th class="ps-3">Unidade</th>
+                <th>Nome</th>
+                <th>Tag</th>
+                <th>SO</th>
+                <th>Processador</th>
+                <th>RAM (GB)</th>
+                <th>Placa-mãe</th>
+                <th>Disco</th>
+                <th>GB</th>
+                <th>Fornecedor</th>
+                <th>Offline</th>
+                <th class="text-center">Status</th>
+                <th class="text-end pe-3">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in maquinas %}
+                <tr class="{% if m.status == 'OFF' %}table-danger{% else %}table-success{% endif %} bg-opacity-10">
+                    <td class="ps-3 fw-bold">{{ m.unidade_associada_display }}</td>
+                    <td>{{ m.nome }}</td>
+                    <td><span class="font-monospace text-muted">{{ m.tag }}</span></td>
+                    <td><span class="badge bg-secondary-subtle text-secondary border px-1" style="white-space: normal; max-width: 140px; text-align: left; line-height: 1.2;">{{ m.sistema_operacional }}</span></td>
+                    <td style="max-width: 200px; white-space: normal;" title="{{ m.processador }}">{{ m.processador }}</td>
+                    <td>{{ m.memoria_total_display }}</td>
+                    <td class="text-truncate" style="max-width: 120px;" title="{{ m.placa_mae }}">{{ m.placa_mae }}</td>
+                    <td>{{ m.disco }}</td>
+                    <td>{{ m.tamanho_disco }}</td>
+                    <td>{{ m.fornecedor_associado_display }}</td>
+                    <td class="text-muted">{{ m.tempo_off_dias }}d {{ m.tempo_off_horas }}h</td>
+                    <td class="text-center">
+                        {% if m.status == 'OFF' %}
+                            <span class="badge bg-danger rounded-pill">OFF</span>
+                        {% else %}
+                            <span class="badge bg-success rounded-pill">ON</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-3">
+                    <form method="post" action="{% url 'deletar_maquina' m.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Apagar"
+                                onclick="return confirm('Tem certeza que deseja excluir esta máquina?')"><i class="bi bi-trash"></i></button>
+                    </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4 border rounded bg-light">
+            <i class="bi bi-pc-display fs-3 d-block mb-2"></i>Nenhuma máquina encontrada com os filtros atuais.
+        </div>
+        {% endif %}
+    </div>
+</div>
 
-<hr>
-
-{% if equipamentos %}
-  <div class="table-responsive">
-    <table class="table table-striped table-hover table-sm small align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>Unidade</th>
-          <th>Nome</th>
-          <th>Setor</th>
-          <th>Tipo</th>
-          <th>Patrimônio</th>
-          <th>Marca</th>
-          <th>Modelo</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for e in equipamentos %}
-          <tr>
-            <td>{{ e.unidade }}</td>
-            <td>{{ e.nome }}</td>
-            <td>{{ e.setor }}</td>
-            <td>{{ e.tipo }}</td>
-            <td>{{ e.patrimonio }}</td>
-            <td>{{ e.marca }}</td>
-            <td>{{ e.modelo }}</td>
-            <td>
-              <a href="{% url 'cadastro_equipamento_editar' e.id %}" class="btn btn-warning btn-sm">Editar</a>
-              <form method="post" action="{% url 'deletar_equipamento' e.id %}" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger btn-sm"
-                        onclick="return confirm('Tem certeza que deseja excluir este equipamento?')">Apagar</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% else %}
-  <p>Nenhum equipamento encontrado.</p>
-{% endif %}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+        <h5 class="fw-bold text-secondary mb-0"><i class="bi bi-printer me-2"></i>Outros Equipamentos Consolidados</h5>
+    </div>
+    <div class="card-body p-4">
+        {% if equipamentos %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm small align-middle border">
+            <thead class="table-light">
+                <tr>
+                <th class="ps-3">Unidade</th>
+                <th>Nome</th>
+                <th>Setor</th>
+                <th>Tipo</th>
+                <th>Patrimônio</th>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th class="text-end pe-3">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in equipamentos %}
+                <tr>
+                    <td class="ps-3 fw-bold">{{ e.unidade }}</td>
+                    <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">{{ e.nome }}</span></td>
+                    <td class="text-muted">{{ e.setor }}</td>
+                    <td>{{ e.tipo }}</td>
+                    <td class="font-monospace text-secondary">{{ e.patrimonio }}</td>
+                    <td>{{ e.marca }}</td>
+                    <td>{{ e.modelo }}</td>
+                    <td class="text-end pe-3" style="width: 100px;">
+                    <a href="{% url 'cadastro_equipamento_editar' e.id %}" class="btn btn-outline-warning btn-sm me-1" title="Editar"><i class="bi bi-pencil"></i></a>
+                    <form method="post" action="{% url 'deletar_equipamento' e.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Apagar"
+                                onclick="return confirm('Tem certeza que deseja excluir este equipamento?')"><i class="bi bi-trash"></i></button>
+                    </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4 border rounded bg-light">
+            <i class="bi bi-printer fs-3 d-block mb-2"></i>Nenhum equipamento consolidado encontrado.
+        </div>
+        {% endif %}
+    </div>
+</div>
 
 <!-- Select2 CSS + Bootstrap Theme -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>

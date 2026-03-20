@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  django:
+    build: .
+    container_name: django_suprimentos
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
