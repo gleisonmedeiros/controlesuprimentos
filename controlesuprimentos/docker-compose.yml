@@ -1,9 +1,8 @@
-version: "3.9"
-
 services:
   django:
     build: .
     container_name: django_suprimentos
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:

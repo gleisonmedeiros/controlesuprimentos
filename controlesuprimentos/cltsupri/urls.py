@@ -47,4 +47,9 @@ urlpatterns = [
     path('equipamento/', views.cadastro_equipamento_consolidado, name='cadastro_equipamento_consolidado'),
     path('equipamento/<int:equipamento_id>/', views.cadastro_equipamento_consolidado, name='cadastro_equipamento_editar'),
     path('consolidado-equipamentos/', views.consolidado_equipamentos, name='consolidado_equipamentos'),
+    path('relatorio-estoque/', views.relatorio_estoque, name='relatorio_estoque'),
+    path('novo-ticket/', views.novo_ticket, name='novo_ticket'),
+    path('relatorio-tickets/', views.relatorio_tickets, name='relatorio_tickets'),
+    path('resumo-defeitos/', views.relatorio_pecas_defeituosas, name='relatorio_pecas_defeituosas'),
+    path('ticket/<int:ticket_id>/status/', views.alterar_status_ticket, name='alterar_status_ticket'),
 ]

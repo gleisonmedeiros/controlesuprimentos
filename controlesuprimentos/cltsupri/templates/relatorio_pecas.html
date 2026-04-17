@@ -1,0 +1,113 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-box-seam"></i> Resumo de Peças para Reposição</h2>
+            <p class="text-muted">Consolidado quantitativo baseado em {{ total_tickets }} tickets abertos.</p>
+        </div>
+        <div>
+            <a href="{% url 'relatorio_tickets' %}" class="btn btn-outline-secondary d-print-none"><i class="bi bi-arrow-left"></i> Voltar aos Tickets</a>
+            <button onclick="window.print()" class="btn btn-info text-white d-print-none"><i class="bi bi-printer"></i> Imprimir</button>
+        </div>
+    </div>
+
+    <!-- Cabeçalho Exclusivo para Impressão -->
+    <div class="d-none d-print-block mb-4 text-center border-bottom pb-3">
+        <h2 class="fw-bold text-primary">InfraECO - Relatório de Peças</h2>
+        <p class="text-muted small">Resumo Consolidado de Necessidades | Gerado em: {% now "d/m/Y H:i" %}</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- SEÇÃO: PEÇAS COM DEFEITO (PARA TROCA) -->
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm overflow-hidden" style="border-radius: 12px; border-left: 5px solid #ef4444 !important;">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 fw-bold text-danger"><i class="bi bi-x-octagon"></i> Peças com Defeito (Ruins)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless align-middle">
+                            <thead class="text-secondary small text-uppercase">
+                                <tr>
+                                    <th>Especificação da Peça</th>
+                                    <th class="text-end">Quantidade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in lista_ruins %}
+                                <tr class="border-bottom">
+                                    <td class="py-3 fw-semibold">{{ item.nome }}</td>
+                                    <td class="text-end py-3">
+                                        <span class="badge bg-danger fs-6 px-3">{{ item.total }}</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="2" class="text-center py-4 text-muted">Nenhuma peça com defeito registrada.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEÇÃO: PEÇAS FALTANTES (PARA COMPRA/REPOSIÇÃO) -->
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm overflow-hidden" style="border-radius: 12px; border-left: 5px solid #f59e0b !important;">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 fw-bold text-warning"><i class="bi bi-plus-circle"></i> Peças Necessárias (Faltantes)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless align-middle">
+                            <thead class="text-secondary small text-uppercase">
+                                <tr>
+                                    <th>O que o Equipamento Necessita</th>
+                                    <th class="text-end">Quantidade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in lista_necessarias %}
+                                <tr class="border-bottom">
+                                    <td class="py-3 fw-semibold">{{ item.nome }}</td>
+                                    <td class="text-end py-3">
+                                        <span class="badge bg-warning text-dark fs-6 px-3">{{ item.total }}</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="2" class="text-center py-4 text-muted">Nenhuma falta registrada.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESUMO DE CATEGORIAS (OPCIONAL/INFORMATIVO) -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="alert alert-info border-0 shadow-sm d-flex align-items-center">
+                <i class="bi bi-lightbulb fs-3 me-3"></i>
+                <div>
+                    <strong>Dica Técnica:</strong> Este relatório agrupa automaticamente peças idênticas. Placas-mãe são agrupadas por **Socket/DDR** e memórias por **Tecnologia/Capacidade**, facilitando a verificação de compatibilidade no estoque.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        .btn, .alert { display: none !important; }
+        .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+    }
+</style>
+{% endblock %}

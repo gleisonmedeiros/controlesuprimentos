@@ -1,29 +1,52 @@
-from django.db.models import Sum
-import openpyxl
-from django.http import HttpResponse
-from django.contrib.auth.decorators import login_required
-from .forms import UnidadeForm, SuprimentoForm, ProjetoForm, EntregaSuprimentoForm,EquipamentoCadastroForm,ConsolidadoEquipamentoForm
-from django.contrib import messages
-from .models import Equipamento,ConsolidadoEquipamento, EntregaSuprimento, Suprimento, Projeto, Unidade, UnidadeAssociacao, ModeloFornecedor, Maquina,ConsolidadoMaquinas,EquipamentoCadastro
-from .forms import EquipamentoForm, ModeloFornecedorForm, UnidadeAssociacaoForm,ConsolidadoMaquinasForm
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
-from .forms import LoginForm
-from django.db.models import Q
-import json
-
-from datetime import timedelta, datetime
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-
-from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
-from .forms import LoginForm
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib import messages
+from django.db.models import Q, Sum, Count
+from django.db import transaction
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from django.template.loader import get_template
+
+import json
+import openpyxl
+from datetime import timedelta, datetime
+from collections import defaultdict
+
+from .models import (
+    Projeto, Unidade, Suprimento, EntregaSuprimento, Maquina, 
+    Equipamento, EquipamentoCadastro, ConsolidadoMaquinas, 
+    ConsolidadoEquipamento, UnidadeAssociacao, ModeloFornecedor, 
+    TicketManutencao
+)
+from .forms import (
+    LoginForm, ProjetoForm, UnidadeForm, SuprimentoForm, 
+    EntregaSuprimentoForm, EquipamentoForm, EquipamentoCadastroForm, 
+    ModeloFornecedorForm, UnidadeAssociacaoForm, 
+    ConsolidadoMaquinasForm, TicketManutencaoForm, ConsolidadoEquipamentoForm
+)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def relatorio_estoque(request):
+    suprimentos = Suprimento.objects.all().order_by('nome')
+    if request.method == 'POST' and request.POST.get('editar_estoque'):
+        for suprimento in suprimentos:
+            field_name = f"quantidade_{suprimento.id}"
+            nova_quantidade = request.POST.get(field_name)
+            if nova_quantidade is not None:
+                try:
+                    nova_quantidade = int(nova_quantidade)
+                    if nova_quantidade >= 0:
+                        suprimento.quantidade = nova_quantidade
+                        suprimento.save()
+                except ValueError:
+                    pass
+        return redirect('relatorio_estoque')
+    context = {'suprimentos': suprimentos}
+    return render(request, 'relatorio_estoque.html', context)
 
 
 
@@ -224,6 +247,7 @@ def criar_unidade(request, unidade_id=None):
         # Excluir unidade
         if 'delete' in request.POST:
             Unidade.objects.filter(id=request.POST.get('delete')).delete()
+            messages.success(request, 'Unidade excluída com sucesso!')
             return redirect('criar_unidade')
 
         # Criar ou editar unidade
@@ -236,6 +260,7 @@ def criar_unidade(request, unidade_id=None):
             Unidade.objects.filter(nome=nome, projeto=projeto).exclude(id=unidade_id).delete()
 
             form.save()
+            messages.success(request, 'Unidade salva com sucesso!')
             return redirect('criar_unidade')
         else:
             erro = iterando_erro(form)
@@ -273,12 +298,14 @@ def criar_suprimento(request, suprimento_id=None):
         # Excluir suprimento
         if 'delete' in request.POST:
             Suprimento.objects.filter(id=request.POST.get('delete')).delete()
+            messages.success(request, 'Suprimento excluído com sucesso!')
             return redirect('criar_suprimento')
 
         # Criar ou editar suprimento
         form = SuprimentoForm(request.POST, instance=suprimento)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Suprimento salvo com sucesso!')
             return redirect('criar_suprimento')
         else:
             erro = iterando_erro(form)
@@ -311,12 +338,14 @@ def criar_projeto(request, projeto_id=None):
         # Excluir projeto
         if 'delete' in request.POST:
             Projeto.objects.filter(id=request.POST.get('delete')).delete()
+            messages.success(request, 'Projeto excluído com sucesso!')
             return redirect('criar_projeto')
 
         # Criar ou editar projeto
         form = ProjetoForm(request.POST, instance=projeto)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Projeto salvo com sucesso!')
             return redirect('criar_projeto')
         else:
             erro = iterando_erro(form)
@@ -401,6 +430,7 @@ def entrega_suprimento(request):
 
                 # Processa os registros
                 entregas_para_salvar = []
+                quantidade_por_suprimento = {}
 
                 if unidade and data:
                     for i, item in enumerate(registros or [], start=1):
@@ -426,18 +456,52 @@ def entrega_suprimento(request):
                             if not suprimento:
                                 erros.append(f"Linha {i}: Suprimento '{toner}' não encontrado.")
                             else:
+                                try:
+                                    quantidade_int = int(quantidade)
+                                except (TypeError, ValueError):
+                                    erros.append(f"Linha {i}: Quantidade inválida.")
+                                    continue
+
+                                if quantidade_int <= 0:
+                                    erros.append(f"Linha {i}: Quantidade deve ser maior que zero.")
+                                    continue
+
+                                quantidade_por_suprimento[suprimento.id] = quantidade_por_suprimento.get(suprimento.id, 0) + quantidade_int
+
                                 entregas_para_salvar.append(EntregaSuprimento(
                                     unidade=unidade,
                                     suprimento=suprimento,
-                                    quantidade_entregue=quantidade,
+                                    quantidade_entregue=quantidade_int,
                                     data=data,
                                     setor=setor
                                 ))
 
-                # Salva apenas se não houver erros
+                # Valida saldo e salva apenas se não houver erros
                 if not erros:
-                    for entrega in entregas_para_salvar:
-                        entrega.save()
+                    with transaction.atomic():
+                        suprimentos_em_uso = {
+                            s.id: s
+                            for s in Suprimento.objects.select_for_update().filter(id__in=quantidade_por_suprimento.keys())
+                        }
+
+                        for suprimento_id, quantidade_requisitada in quantidade_por_suprimento.items():
+                            suprimento = suprimentos_em_uso.get(suprimento_id)
+                            if not suprimento:
+                                erros.append("Suprimento não encontrado durante a atualização de estoque.")
+                                continue
+
+                            if suprimento.quantidade < quantidade_requisitada:
+                                erros.append(
+                                    f"Estoque insuficiente para '{suprimento.nome}'. Disponível: {suprimento.quantidade}, solicitado: {quantidade_requisitada}."
+                                )
+
+                        if not erros:
+                            for suprimento_id, quantidade_requisitada in quantidade_por_suprimento.items():
+                                suprimento = suprimentos_em_uso[suprimento_id]
+                                suprimento.quantidade -= quantidade_requisitada
+                                suprimento.save(update_fields=['quantidade'])
+
+                            EntregaSuprimento.objects.bulk_create(entregas_para_salvar)
 
                 contexto = {
                     'form': EntregaSuprimentoForm(),
@@ -508,8 +572,10 @@ def pesquisa_entrega(request):
             # Se a quantidade for zero, deleta o registro
             if entrega.quantidade_entregue == 0:
                 entrega.delete()
+                messages.success(request, 'Entrega excluída com sucesso!')
             else:
                 entrega.save()
+                messages.success(request, 'Entrega atualizada com sucesso!')
 
             # Limpa a sessão após salvar ou deletar
             request.session.pop('entrega_id', None)
@@ -557,6 +623,24 @@ def relatorio_toners(request):
         .order_by('suprimento__nome')
     )
 
+    # Estoque atual de cada toner
+    suprimentos = Suprimento.objects.all().order_by('nome')
+
+    # Atualização de estoque (POST)
+    if request.method == 'POST' and request.POST.get('editar_estoque'):
+        for suprimento in suprimentos:
+            field_name = f"quantidade_{suprimento.id}"
+            nova_quantidade = request.POST.get(field_name)
+            if nova_quantidade is not None:
+                try:
+                    nova_quantidade = int(nova_quantidade)
+                    if nova_quantidade >= 0:
+                        suprimento.quantidade = nova_quantidade
+                        suprimento.save()
+                except ValueError:
+                    pass  # ignora valores inválidos
+        return redirect('relatorio_toners')
+
     context = {
         'entregas': entregas,
         'data_inicio': data_inicio,
@@ -565,6 +649,7 @@ def relatorio_toners(request):
         'unidades': unidades,
         'projeto_id': projeto_id,
         'unidade_id': unidade_id,
+        'suprimentos': suprimentos,
     }
     return render(request, 'relatorio_toners.html', context)
 
@@ -843,6 +928,7 @@ def cadastro_equipamento_consolidado(request, equipamento_id=None):
         # Exclusão
         if 'excluir' in request.POST and equipamento_instance:
             equipamento_instance.delete()
+            messages.success(request, 'Equipamento excluído com sucesso!')
             return redirect('cadastro_equipamento_consolidado')
 
         # Cadastro / edição
@@ -850,7 +936,11 @@ def cadastro_equipamento_consolidado(request, equipamento_id=None):
             form = EquipamentoForm(request.POST, instance=equipamento_instance)
             if form.is_valid():
                 form.save()
+                messages.success(request, 'Equipamento salvo com sucesso!')
                 return redirect('cadastro_equipamento_consolidado')
+            else:
+                errors = iterando_erro(form)
+                messages.error(request, 'Verifique os campos e tente novamente.')
     else:
         form = EquipamentoForm(instance=equipamento_instance)
 
@@ -949,6 +1039,7 @@ def modelo_fornecedor_manage(request, pk=None, action=None):
         # Opcional: limpar fornecedor_associado das máquinas desse modelo
         Maquina.objects.filter(placa_mae=modelo).update(fornecedor_associado=None)
 
+        messages.success(request, f"Associação do modelo '{modelo}' excluída com sucesso.")
         return redirect('modelo-fornecedor-manage')
 
     # Editar ou Criar
@@ -974,6 +1065,10 @@ def modelo_fornecedor_manage(request, pk=None, action=None):
             form.save()
             # Atualiza máquinas desse modelo
             Maquina.objects.filter(placa_mae=modelo).update(fornecedor_associado=fornecedor)
+            if pk and action == 'edit':
+                messages.success(request, f"Associação do modelo '{modelo}' atualizada com sucesso.")
+            else:
+                messages.success(request, f"Associação do modelo '{modelo}' criada com sucesso.")
             return redirect('modelo-fornecedor-manage')
 
     # Listagem
@@ -1494,3 +1589,150 @@ def consolidado_equipamentos(request):
         'selected_projeto': selected_projeto,
         'selected_unidade': selected_unidade,
     })
+
+import json
+from datetime import date
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from .models import TicketManutencao
+from .forms import TicketManutencaoForm
+
+@login_required(login_url='login')
+def novo_ticket(request):
+    if request.method == 'POST':
+        form = TicketManutencaoForm(request.POST)
+        if form.is_valid():
+            ticket = form.save(commit=False)
+            
+            # Gerar ticket ID #AAAAMMDD-XXX
+            hoje = date.today()
+            prefixo = hoje.strftime("%Y%m%d")
+            # Encontrar o último ticket de hoje
+            ultimo_ticket = TicketManutencao.objects.filter(ticket_id__startswith=f'#{prefixo}').order_by('-ticket_id').first()
+            if ultimo_ticket:
+                # Extrair os últimos 3 digitos e somar 1
+                seq = int(ultimo_ticket.ticket_id.split('-')[1]) + 1
+            else:
+                seq = 1
+            
+            ticket.ticket_id = f"#{prefixo}-{seq:03d}"
+            
+            # Capturar array json dos pentes de RAM
+            pentes_json = request.POST.get('ram_pentes_detalhes_json', '[]')
+            try:
+                ticket.ram_pentes_detalhes = json.loads(pentes_json)
+            except:
+                ticket.ram_pentes_detalhes = []
+                
+            ticket.save()
+            messages.success(request, f"Ticket {ticket.ticket_id} criado com sucesso!")
+            return redirect('novo_ticket')
+        else:
+            messages.error(request, "Erro ao criar ticket. Verifique os campos.")
+    else:
+        # Tentar preencher tecnico inicialmente com o usuário da sessão
+        form = TicketManutencaoForm()
+        
+    return render(request, 'novo_ticket.html', {'form': form})
+
+from collections import defaultdict
+
+@login_required(login_url='login')
+def relatorio_tickets(request):
+    from .models import TicketManutencao
+    tickets = TicketManutencao.objects.all().order_by('-data_abertura', '-id')
+    return render(request, 'relatorio_tickets.html', {'tickets': tickets})
+
+@login_required(login_url='login')
+def relatorio_pecas_defeituosas(request):
+    from .models import TicketManutencao
+    tickets = TicketManutencao.objects.all()
+    
+    # Resumo quantitativo sem repetir especificações
+    pecas_ruins = defaultdict(int)
+    pecas_necessarias = defaultdict(int)
+
+    for t in tickets:
+        is_desktop = t.tipo_equipamento == 'Desktop'
+        
+        # Gabinete / Equipamento Geral
+        if t.gabinete_estado == 'Ruim':
+            if is_desktop:
+                key = f"{t.tipo_equipamento} ({t.equipamento_marca} {t.equipamento_modelo})"
+            else:
+                # Para outros equipamentos, agrupar apenas por Tipo e Modelo (ignorar marca na soma)
+                key = f"{t.tipo_equipamento} ({t.equipamento_modelo})"
+            pecas_ruins[key] += 1
+
+        if is_desktop:
+            # Processador
+            if t.processador_estado == 'Ruim':
+                key = f"Processador {t.processador_nome or ''} ({t.processador_socket or ''})"
+                pecas_ruins[key] += 1
+
+            # Placa-Mãe
+            if t.placa_mae_estado == 'Ruim':
+                key = f"Placa-Mãe ({t.processador_socket or ''} / {t.ram_tipo or ''})"
+                pecas_ruins[key] += 1
+
+            # Armazenamento
+            if t.armazenamento_estado == 'Ruim':
+                key = f"{t.armazenamento_tipo or ''} {t.armazenamento_capacidade or ''}"
+                pecas_ruins[key] += 1
+            elif t.armazenamento_estado == 'Não contém':
+                key = "Unidade de Armazenamento (Necessário)"
+                pecas_necessarias[key] += 1
+
+            # Memória RAM
+            if t.ram_ausente:
+                key = f"Memória RAM {t.ram_tipo or ''} (Necessária)"
+                pecas_necessarias[key] += 1
+            else:
+                for pente in t.ram_pentes_detalhes:
+                    if pente.get('estado') == 'Ruim':
+                        capacidade = str(pente.get('capacidade', ''))
+                        if capacidade.isdigit():
+                            capacidade += "GB"
+                        key = f"Memória RAM {t.ram_tipo or ''} {capacidade}"
+                        pecas_ruins[key.strip()] += 1
+
+            # Fonte
+            if t.fonte_estado == 'Ruim':
+                key = f"Fonte {t.fonte_tipo or ''}"
+                pecas_ruins[key] += 1
+            elif t.fonte_estado == 'Não contém':
+                key = "Fonte (Necessária)"
+                pecas_necessarias[key] += 1
+
+            # Cooler
+            if t.cooler_estado == 'Ruim':
+                key = f"Cooler ({t.processador_socket or ''})"
+                pecas_ruins[key] += 1
+
+    # Converter para lista ordenada
+    lista_ruins = sorted([{'nome': k, 'total': v} for k, v in pecas_ruins.items()], key=lambda x: x['nome'])
+    lista_necessarias = sorted([{'nome': k, 'total': v} for k, v in pecas_necessarias.items()], key=lambda x: x['nome'])
+
+    context = {
+        'lista_ruins': lista_ruins,
+        'lista_necessarias': lista_necessarias,
+        'total_tickets': tickets.count()
+    }
+    return render(request, 'relatorio_pecas.html', context)
+
+@csrf_exempt
+@require_POST
+@login_required(login_url='login')
+def alterar_status_ticket(request, ticket_id):
+    from .models import TicketManutencao
+    import json
+    try:
+        data = json.loads(request.body)
+        novo_status = data.get('status')
+        ticket = TicketManutencao.objects.get(id=ticket_id)
+        ticket.status = novo_status
+        ticket.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)

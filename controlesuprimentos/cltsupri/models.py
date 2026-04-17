@@ -139,3 +139,96 @@ class ConsolidadoEquipamento(models.Model):
 
     def __str__(self):
         return f"{self.projeto.nome} - {self.unidade.nome} - {self.equipamento.nome}: {self.quantidade}"
+
+class TicketManutencao(models.Model):
+    ESTADO_CHOICES = [
+        ('Bom', 'Bom'),
+        ('Ruim', 'Ruim'),
+        ('Não contém', 'Não contém'),
+    ]
+    
+    ESTADO_SIMPLES_CHOICES = [
+        ('Bom', 'Bom'),
+        ('Ruim', 'Ruim'),
+    ]
+    
+    TIPO_RAM_CHOICES = [
+        ('DDR2', 'DDR2'),
+        ('DDR3', 'DDR3'),
+        ('DDR4', 'DDR4'),
+        ('DDR5', 'DDR5'),
+    ]
+
+    TIPO_ARMAZENAMENTO_CHOICES = [
+        ('HD', 'HD'),
+        ('SSD', 'SSD'),
+        ('NVMe', 'NVMe'),
+        ('Não contém', 'Não contém'),
+    ]
+
+    TIPO_FONTE_CHOICES = [
+        ('ATX', 'ATX'),
+        ('Slim', 'Slim'),
+        ('Não contém', 'Não contém'),
+    ]
+
+    TIPO_EQUIPAMENTO_CHOICES = [
+        ('Desktop', 'Desktop'),
+        ('Monitor', 'Monitor'),
+        ('Teclado', 'Teclado'),
+        ('Mouse', 'Mouse'),
+        ('Estabilizador', 'Estabilizador'),
+        ('Nobreak', 'Nobreak'),
+    ]
+
+    ticket_id = models.CharField(max_length=20, unique=True, verbose_name="Ticket ID")
+    data_abertura = models.DateField(auto_now_add=True, verbose_name="Data de Abertura")
+    tecnico = models.CharField(max_length=100, verbose_name="Técnico")
+    patrimonio = models.CharField(max_length=50, blank=True, null=True, verbose_name="Patrimônio")
+    ram_ausente = models.BooleanField(default=False, verbose_name="Não contém RAM")
+    tipo_equipamento = models.CharField(max_length=50, choices=TIPO_EQUIPAMENTO_CHOICES, default='Desktop', verbose_name="Tipo de Equipamento")
+    
+    # EQUIPAMENTO
+    equipamento_marca = models.CharField(max_length=100, verbose_name="Marca")
+    equipamento_modelo = models.CharField(max_length=100, verbose_name="Modelo")
+    gabinete_estado = models.CharField(max_length=20, choices=ESTADO_SIMPLES_CHOICES, default='Bom')
+    
+    # PROCESSADOR
+    processador_nome = models.CharField(max_length=100, verbose_name="Nome do Processador", blank=True, null=True)
+    processador_socket = models.CharField(max_length=50, verbose_name="Socket do Processador", blank=True, null=True)
+    processador_estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Bom')
+    
+    # MEMORIA RAM
+    ram_tipo = models.CharField(max_length=20, choices=TIPO_RAM_CHOICES, default='DDR4', verbose_name="Tecnologia (DDR)")
+    ram_qtd_pentes = models.PositiveIntegerField(default=1, verbose_name="Quantidade de Pentes")
+    ram_pentes_detalhes = models.JSONField(default=list, blank=True, help_text="Lista de dicionários [{capacidade: X, estado: 'Bom'}]")
+    
+    # ARMAZENAMENTO
+    armazenamento_tipo = models.CharField(max_length=20, choices=TIPO_ARMAZENAMENTO_CHOICES, default='SSD')
+    armazenamento_capacidade = models.CharField(max_length=50, blank=True, null=True, verbose_name="Capacidade (ex: 500GB)")
+    armazenamento_estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Bom')
+    
+    # PLACA-MÃE
+    placa_mae_estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Bom')
+    
+    
+    # FONTE
+    fonte_tipo = models.CharField(max_length=20, choices=TIPO_FONTE_CHOICES, default='ATX')
+    fonte_estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Bom')
+    
+    # COOLER
+    cooler_estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Bom')
+    
+    # DIAGNÓSTICO E OBS
+    diagnostico = models.TextField(blank=True, null=True, verbose_name="Diagnóstico Automático")
+    observacoes = models.TextField(blank=True, null=True, verbose_name="Observações do Técnico")
+    
+    STATUS_CHOICES = [
+        ('ABERTO', 'Aberto'),
+        ('AGUARDANDO PEÇAS', 'Aguardando Peças'),
+        ('FINALIZADO', 'Finalizado'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ABERTO', verbose_name="Status")
+
+    def __str__(self):
+        return f"{self.ticket_id} - {self.equipamento_modelo}"

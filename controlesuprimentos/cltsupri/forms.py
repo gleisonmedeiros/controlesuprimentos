@@ -156,3 +156,42 @@ class EntregaSuprimentoForm(forms.ModelForm):
         # Customiza as opções de unidade e suprimento, se necessário
         self.fields['unidade'].queryset = Unidade.objects.all()
 
+from .models import TicketManutencao
+
+class TicketManutencaoForm(forms.ModelForm):
+    class Meta:
+        model = TicketManutencao
+        exclude = ['ticket_id', 'data_abertura']
+        widgets = {
+            'tecnico': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome do Responsável'}),
+            'patrimonio': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nº de Identificação'}),
+            'tipo_equipamento': forms.Select(attrs={'class': 'form-select'}),
+            'equipamento_marca': forms.TextInput(attrs={'class': 'form-control'}),
+            'equipamento_modelo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Dell P2419H'}),
+            'gabinete_estado': forms.Select(attrs={'class': 'form-select'}),
+            
+            'processador_nome': forms.TextInput(attrs={'class': 'form-control'}),
+            'processador_socket': forms.TextInput(attrs={'class': 'form-control'}),
+            'processador_estado': forms.Select(attrs={'class': 'form-select'}),
+            
+            'ram_tipo': forms.Select(attrs={'class': 'form-select'}),
+            'ram_ausente': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'ram_qtd_pentes': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            
+            'armazenamento_tipo': forms.Select(attrs={'class': 'form-select'}),
+            'armazenamento_capacidade': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 500GB'}),
+            'armazenamento_estado': forms.Select(attrs={'class': 'form-select'}),
+            
+            'placa_mae_estado': forms.Select(attrs={'class': 'form-select'}),
+            
+            'fonte_tipo': forms.Select(attrs={'class': 'form-select'}),
+            'fonte_estado': forms.Select(attrs={'class': 'form-select'}),
+            
+            'cooler_estado': forms.Select(attrs={'class': 'form-select'}),
+            
+            'diagnostico': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'readonly': 'readonly'}),
+            'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notas adicionais do técnico...'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+

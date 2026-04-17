@@ -1,0 +1,161 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold"><i class="bi bi-journal-text"></i> Histórico de Tickets</h2>
+        <div>
+            <a href="{% url 'novo_ticket' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo Ticket</a>
+            <a href="{% url 'relatorio_pecas_defeituosas' %}" class="btn btn-warning"><i class="bi bi-box-seam"></i> Resumo de Peças</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Data</th>
+                            <th>ID Ticket</th>
+                            <th>Técnico</th>
+                            <th>Status</th>
+                            <th>Equipamento</th>
+                            <th>Marca / Modelo</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in tickets %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="small text-muted">{{ ticket.data_abertura|date:"d/m/Y" }}</div>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ ticket.ticket_id }}</span></td>
+                            <td>
+                                <select class="form-select form-select-sm status-select fw-bold" 
+                                        data-id="{{ ticket.id }}"
+                                        onchange="updateStatus(this)"
+                                        style="width: 150px; border-radius: 20px;">
+                                    <option value="ABERTO" {% if ticket.status == 'ABERTO' %}selected{% endif %} class="text-primary">Aberto</option>
+                                    <option value="AGUARDANDO PEÇAS" {% if ticket.status == 'AGUARDANDO PEÇAS' %}selected{% endif %} class="text-warning">Aguardando Peças</option>
+                                    <option value="FINALIZADO" {% if ticket.status == 'FINALIZADO' %}selected{% endif %} class="text-success">Finalizado</option>
+                                </select>
+                            </td>
+                            <td>
+                                <span class="badge {% if ticket.tipo_equipamento == 'Desktop' %}bg-info text-dark{% else %}bg-primary{% endif %}">
+                                    {{ ticket.tipo_equipamento }}
+                                </span>
+                            </td>
+                            <td>{{ ticket.equipamento_marca }} / {{ ticket.equipamento_modelo }}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-info rounded-pill px-3" 
+                                        onclick="showDetails('{{ ticket.ticket_id }}', '{{ ticket.tecnico }}', '{{ ticket.data_abertura|date:'d/m/Y' }}', '{{ ticket.diagnostico|escapejs }}', '{{ ticket.observacoes|escapejs }}')">
+                                    <i class="bi bi-eye"></i> Detalhes
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="bi bi-info-circle fs-2 d-block mb-3"></i>
+                                    Nenhum ticket encontrado.
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Detalhes -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalTitle">Detalhes do Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="d-flex justify-content-between mb-3 small text-muted">
+                    <span><i class="bi bi-person me-1"></i> Técnico: <strong id="modalTecnico" class="text-dark"></strong></span>
+                    <span><i class="bi bi-calendar3 me-1"></i> Data: <strong id="modalData" class="text-dark"></strong></span>
+                </div>
+                <div class="bg-light p-3 rounded-3 mb-3" style="border-left: 4px solid #0d6efd;">
+                    <h6 class="fw-bold mb-2 text-primary small"><i class="bi bi-cpu me-1"></i> DIAGNÓSTICO AUTOMÁTICO:</h6>
+                    <div id="modalDiagnostico" style="white-space: pre-wrap; line-height: 1.5; font-size: 0.9rem;"></div>
+                </div>
+                <div class="bg-white p-3 rounded-3 border" style="border-left: 4px solid #6c757d;">
+                    <h6 class="fw-bold mb-2 text-secondary small"><i class="bi bi-chat-left-text me-1"></i> OBSERVAÇÕES:</h6>
+                    <div id="modalObservacoes" style="white-space: pre-wrap; line-height: 1.5; font-size: 0.9rem;"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateStatus(select) {
+        const ticketId = select.getAttribute('data-id');
+        const newStatus = select.value;
+        
+        // Efeito visual imediato
+        select.style.opacity = '0.5';
+        
+        fetch(`/controlesupri/ticket/${ticketId}/status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(response => response.json())
+        .then(data => {
+            select.style.opacity = '1';
+            if (data.success) {
+                // Sucesso
+                applyStatusColors(select);
+            } else {
+                alert('Erro ao atualizar status: ' + data.error);
+            }
+        })
+        .catch(error => {
+            select.style.opacity = '1';
+            console.error('Error:', error);
+            alert('Erro de conexão ao atualizar status.');
+        });
+    }
+
+    function applyStatusColors(select) {
+        const val = select.value;
+        select.classList.remove('text-primary', 'text-warning', 'text-success');
+        if (val === 'ABERTO') select.classList.add('text-primary');
+        if (val === 'AGUARDANDO PEÇAS') select.classList.add('text-warning');
+        if (val === 'FINALIZADO') select.classList.add('text-success');
+    }
+
+    function showDetails(id, tecnico, data, diagnostico, observacoes) {
+        document.getElementById('modalTitle').innerText = 'Ticket: ' + id;
+        document.getElementById('modalTecnico').innerText = tecnico;
+        document.getElementById('modalData').innerText = data;
+        document.getElementById('modalDiagnostico').innerText = diagnostico;
+        document.getElementById('modalObservacoes').innerText = observacoes || "Nenhuma observação registrada.";
+        
+        const myModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+        myModal.show();
+    }
+
+    // Inicializa cores dos selects
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.status-select').forEach(applyStatusColors);
+    });
+</script>
+{% endblock %}

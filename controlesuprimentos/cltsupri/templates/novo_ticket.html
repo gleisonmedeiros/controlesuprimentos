@@ -1,0 +1,567 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<style>
+    .component-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .component-card-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .form-label {
+        font-size: 0.85rem;
+        color: #475569;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .ram-item {
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        position: relative;
+    }
+    .diagnostico-box {
+        background: #fff5f5;
+        border: 1px solid #fecaca;
+        border-left: 4px solid #ef4444;
+        border-radius: 6px;
+        padding: 1.25rem;
+        font-family: monospace;
+        font-size: 0.95rem;
+        color: #b91c1c;
+    }
+</style>
+
+<div class="row justify-content-center pt-3 pb-5">
+    <div class="col-lg-9">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm py-3 px-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>{{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white border-bottom pt-4 pb-3 px-4">
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-ticket-detailed me-2 text-primary"></i>Abertura de Ticket de Suporte</h4>
+            </div>
+            
+            <div class="card-body p-4 bg-light">
+                <form method="POST" id="ticketForm">
+                    {% csrf_token %}
+                    
+                    <!-- IDENTIFICAÇÃO DO EQUIPAMENTO -->
+                    <div class="component-card">
+                        <div class="component-card-title"><i class="bi bi-info-circle"></i> Identificação</div>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Técnico Responsável</label>
+                                {{ form.tecnico }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Patrimônio / ID</label>
+                                {{ form.patrimonio }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-primary fw-bold">Tipo de Equipamento</label>
+                                {{ form.tipo_equipamento }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- INFORMAÇÕES DO EQUIPAMENTO -->
+                    <div class="component-card" id="cardEquipamento">
+                        <div class="component-card-title"><i class="bi bi-pc"></i> <span id="labelEquipamento">Gabinete</span></div>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Marca</label>
+                                {{ form.equipamento_marca }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Modelo</label>
+                                <div id="modeloContainer">
+                                    <!-- Será preenchido via JS: Select para Desktop, Input para outros -->
+                                    <input type="text" name="equipamento_modelo" class="form-control" placeholder="Modelo do equipamento">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Estado Geral</label>
+                                <select name="gabinete_estado" class="form-select estado-select" data-component="Gabinete">
+                                    {% for val, text in form.fields.gabinete_estado.choices %}
+                                        <option value="{{ val }}" {% if val == form.gabinete_estado.value %}selected{% endif %}>{{ text }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PROCESSAMENTO & ARMAZENAMENTO -->
+                    <div class="component-card hardware-card">
+                        <div class="row g-4">
+                            <!-- PROCESSADOR -->
+                            <div class="col-md-6 border-end pr-3">
+                                <div class="component-card-title mt-0 mb-3"><i class="bi bi-cpu"></i> Processador</div>
+                                <div class="row g-2">
+                                    <div class="col-8">
+                                        <label class="form-label small">Modelo / Nome</label>
+                                        {{ form.processador_nome }}
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small">Estado</label>
+                                        <select name="processador_estado" class="form-select estado-select" data-component="Processador">
+                                            {% for val, text in form.fields.processador_estado.choices %}
+                                                <option value="{{ val }}">{{ text }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- ARMAZENAMENTO -->
+                            <div class="col-md-6">
+                                <div class="component-card-title mt-0 mb-3"><i class="bi bi-hdd"></i> Armazenamento</div>
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <label class="form-label small">Tipo</label>
+                                        {{ form.armazenamento_tipo }}
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small">Capacidade</label>
+                                        {{ form.armazenamento_capacidade }}
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small">Estado</label>
+                                        <select name="armazenamento_estado" class="form-select estado-select" data-component="Armazenamento">
+                                            {% for val, text in form.fields.armazenamento_estado.choices %}
+                                                <option value="{{ val }}">{{ text }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MEMÓRIA RAM -->
+                    <div class="component-card mb-4 hardware-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                            <div class="component-card-title mb-0"><i class="bi bi-memory"></i> Memória RAM</div>
+                        </div>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <label class="form-label">Tecnologia (DDR)</label>
+                                {{ form.ram_tipo }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Quantidade</label>
+                                {{ form.ram_qtd_pentes }}
+                            </div>
+                            <div class="col-md-4 pt-4">
+                                <div class="form-check form-switch mt-2">
+                                    {{ form.ram_ausente }}
+                                    <label class="form-check-label small" for="{{ form.ram_ausente.id_for_label }}">
+                                        NÃO CONTEM
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="ramList" class="row g-3">
+                            <!-- Os pentes (js) carregam aqui via quantidade -->
+                        </div>
+                        <input type="hidden" name="ram_pentes_detalhes_json" id="ramInputJson">
+                    </div>
+
+                    <!-- OUTROS PERIFÉRICOS (PLACA-MÃE, FONTE, COOLER) -->
+                    <div class="component-card hardware-card">
+                        <div class="component-card-title"><i class="bi bi-pc-display-horizontal"></i> Outros Periféricos</div>
+                        <div class="row g-4">
+                            <!-- PLACA-MÃE -->
+                            <div class="col-md-4">
+                                <label class="form-label d-block text-secondary mb-2 border-bottom pb-1">Placa-Mãe</label>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small">Socket</label>
+                                        {{ form.processador_socket }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small">Estado</label>
+                                        <select name="placa_mae_estado" class="form-select estado-select" data-component="Placa-Mãe">
+                                            {% for val, text in form.fields.placa_mae_estado.choices %}
+                                                <option value="{{ val }}">{{ text }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FONTE -->
+                            <div class="col-md-4">
+                                <label class="form-label d-block text-secondary mb-2 border-bottom pb-1">Fonte de Alimentação</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="form-label text-muted small">Tipo</label>
+                                        {{ form.fonte_tipo }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label text-muted small">Estado</label>
+                                        <select name="fonte_estado" class="form-select estado-select" data-component="Fonte">
+                                            {% for val, text in form.fields.fonte_estado.choices %}
+                                                <option value="{{ val }}">{{ text }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- COOLER -->
+                            <div class="col-md-4">
+                                <label class="form-label d-block text-secondary mb-2 border-bottom pb-1">Cooler Resfriamento</label>
+                                <label class="form-label text-muted small">Estado</label>
+                                <select name="cooler_estado" class="form-select estado-select" data-component="Cooler">
+                                    {% for val, text in form.fields.cooler_estado.choices %}
+                                        <option value="{{ val }}">{{ text }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DIAGNÓSTICO -->
+                    <div class="mt-5">
+                        <h6 class="fw-bold text-danger mb-2"><i class="bi bi-activity me-2"></i>DIAGNÓSTICO AUTOMÁTICO DO TICKET</h6>
+                        <div class="diagnostico-box mb-4" id="diagnosticoDisplay">
+                            [ Sistema pronto aguardando entradas ]
+                        </div>
+                        <textarea class="d-none" name="diagnostico" id="diagnosticoInput"></textarea>
+                        
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold"><i class="bi bi-chat-left-text me-1"></i> Observações Complementares (Opcional):</label>
+                            {{ form.observacoes }}
+                        </div>
+                    </div>
+
+                    <div class="text-end mt-4">
+                        <button type="submit" class="btn btn-primary px-5 py-2 fw-bold shadow">
+                            <i class="bi bi-check2-circle me-2"></i>Salvar Tíquete
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const ramQtdInput = document.querySelector('input[name="ram_qtd_pentes"]');
+    const ramList = document.getElementById("ramList");
+    const ramInputJson = document.getElementById("ramInputJson");
+    const diagnosticoDisplay = document.getElementById("diagnosticoDisplay");
+    const diagnosticoInput = document.getElementById("diagnosticoInput");
+    
+    // Selects
+    const estadoSelects = document.querySelectorAll("select.estado-select");
+    
+    let pentesRam = [];
+    
+    function renderRamList() {
+        ramList.innerHTML = "";
+        pentesRam.forEach((pente, index) => {
+            const div = document.createElement("div");
+            div.className = "col-md-6";
+            div.innerHTML = `
+                <div class="ram-item d-flex align-items-center justify-content-between p-2 border rounded bg-white shadow-sm mb-2">
+                    <div class="d-flex align-items-center gap-3 w-100">
+                        <div style="flex: 2;">
+                            <label class="form-label small text-muted mb-0">Capacidade Pente ${index+1}</label>
+                            <input type="text" class="form-control form-control-sm" placeholder="ex: 8GB" value="${pente.capacidade}" onchange="updateRamCap(${index}, this.value)">
+                        </div>
+                        <div style="flex: 1; text-align: center;">
+                            <label class="form-label small text-muted d-block mb-1">Estado</label>
+                            <div class="form-check form-switch d-inline-block">
+                                <input class="form-check-input" type="checkbox" role="switch" id="ramCheck${index}" ${pente.estado === 'Bom' ? 'checked' : ''} onchange="updateRamCheck(${index}, this.checked)">
+                                <label class="form-check-label small fw-bold" for="ramCheck${index}" id="ramLabel${index}">
+                                    ${pente.estado}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            ramList.appendChild(div);
+        });
+        updateHiddenJson();
+        updateDiagnostico();
+    }
+    
+    window.updateRamCap = function(index, val) {
+        pentesRam[index].capacidade = val;
+        updateHiddenJson();
+    };
+
+    window.updateRamCheck = function(index, isChecked) {
+        pentesRam[index].estado = isChecked ? 'Bom' : 'Ruim';
+        const label = document.getElementById(`ramLabel${index}`);
+        if(label) label.innerText = pentesRam[index].estado;
+        updateHiddenJson();
+        updateDiagnostico();
+    };
+    
+    function updateHiddenJson() {
+        ramInputJson.value = JSON.stringify(pentesRam);
+    }
+
+    // Sincroniza array com a quantidade digitada
+    if(ramQtdInput) {
+        ramQtdInput.addEventListener("input", function() {
+            let qtd = parseInt(this.value) || 0;
+            if(qtd < 0) qtd = 0;
+            
+            // Ajusta o array
+            if (pentesRam.length < qtd) {
+                while(pentesRam.length < qtd) pentesRam.push({ capacidade: '', estado: 'Bom' });
+            } else if (pentesRam.length > qtd) {
+                pentesRam = pentesRam.slice(0, qtd);
+            }
+            renderRamList();
+        });
+        
+        // Dispara o evento inicialmente para carregar caso já tenha valor (ex: 1)
+        if (ramQtdInput.value) {
+            ramQtdInput.dispatchEvent(new Event('input'));
+        }
+    }
+    
+    function updateDiagnostico() {
+        let problemas = [];
+        const tipoEquipamento = document.querySelector('select[name="tipo_equipamento"]').value;
+        const isDesktop = tipoEquipamento === 'Desktop';
+        
+        // Verifica itens normais através do combo (select)
+        const componentsToCheck = ["Gabinete", "Processador", "Armazenamento", "Placa-Mãe", "Fonte", "Cooler"];
+        componentsToCheck.forEach(comp => {
+            const selectElement = document.querySelector(`select.estado-select[data-component="${comp}"]`);
+            if(selectElement) {
+                // Se não for desktop, só verificamos o "Gabinete" (que vira o estado geral do periférico)
+                if (!isDesktop && comp !== "Gabinete") return;
+
+                let compName = comp;
+                if (comp === "Gabinete" && !isDesktop) compName = tipoEquipamento;
+                
+                // Se for armazenamento e não for "Não contém", mostrar HD ou SSD etc
+                if (comp === "Armazenamento") {
+                    const selTipo = document.querySelector(`select[name="armazenamento_tipo"]`);
+                    if (selTipo && selTipo.value !== 'Não contém') {
+                        compName = selTipo.value;
+                    }
+                }
+
+                // Info adicional de Socket para Processador e Cooler
+                let extraInfo = "";
+                if (comp === "Processador" || comp === "Cooler" || comp === "Placa-Mãe") {
+                    const socketInput = document.querySelector('input[name="processador_socket"]');
+                    const ramTipo = document.querySelector('select[name="ram_tipo"]');
+                    
+                    if (socketInput && socketInput.value) {
+                        extraInfo = ` (${socketInput.value})`;
+                    }
+                    
+                    if (comp === "Placa-Mãe" && ramTipo && ramTipo.value) {
+                        // Para placa mãe, adicionamos também o DDR se disponível
+                        let ddrInfo = ramTipo.value;
+                        if (extraInfo) {
+                            extraInfo = ` (${socketInput.value} / ${ddrInfo})`;
+                        } else {
+                            extraInfo = ` (${ddrInfo})`;
+                        }
+                    }
+                }
+
+                if (selectElement.value === 'Ruim') {
+                    problemas.push(`${compName}${extraInfo} ruim`);
+                } else if (isDesktop && (selectElement.value === 'Não contém' || selectElement.value === 'Não contém RAM')) {
+                    if (compName === "Armazenamento") {
+                        problemas.push("NECESSITA SSD");
+                    } else if (compName === "SSD" || compName === "HD" || compName === "NVMe") {
+                        problemas.push(`NECESSITA DE ${compName}`);
+                    } else {
+                        problemas.push(`Necessita de ${compName}${extraInfo}`);
+                    }
+                }
+            }
+        });
+
+        // Trata RAM isoladamente (apenas Desktop)
+        if (isDesktop) {
+            const ramAusenteCheck = document.querySelector('input[name="ram_ausente"]');
+            const ramTipo = document.querySelector(`select[name="ram_tipo"]`);
+            const ramTipoVal = ramTipo ? ramTipo.value : "";
+            
+            if (ramAusenteCheck && ramAusenteCheck.checked) {
+                const ddrInfo = ramTipoVal !== "" ? ` (${ramTipoVal})` : "";
+                problemas.push(`Necessita de Memória RAM${ddrInfo}`);
+            } else {
+                let ruinsItems = pentesRam.filter(p => p.estado === 'Ruim');
+                if (ruinsItems.length > 0) {
+                    const ddrInfo = ramTipoVal !== "" ? ` ${ramTipoVal}` : "";
+                    const caps = ruinsItems.map(p => {
+                        let c = p.capacidade || "?";
+                        return /^\d+$/.test(c) ? c + "GB" : c;
+                    }).join(", ");
+                    problemas.push(`Memória RAM${ddrInfo} ${caps} ruim (${ruinsItems.length} pente(s))`);
+                }
+            }
+        }
+
+        let textoFinal = "";
+        if (problemas.length === 0) {
+            textoFinal = "NENHUM PROBLEMA DETECTADO NAS PEÇAS ACIMA.";
+            diagnosticoDisplay.style.borderColor = "#86efac";
+            diagnosticoDisplay.style.borderLeftColor = "#22c55e";
+            diagnosticoDisplay.style.backgroundColor = "#f0fdf4";
+            diagnosticoDisplay.style.color = "#166534";
+        } else {
+            textoFinal = "ATENÇÃO PARA AS PEÇAS COM DEFEITO/FALTANTES:\n\n" + problemas.join("\n");
+            diagnosticoDisplay.style.borderColor = "#fecaca";
+            diagnosticoDisplay.style.borderLeftColor = "#ef4444";
+            diagnosticoDisplay.style.backgroundColor = "#fff5f5";
+            diagnosticoDisplay.style.color = "#b91c1c";
+        }
+        
+        diagnosticoDisplay.innerText = textoFinal;
+        diagnosticoInput.value = textoFinal;
+    }
+    
+    estadoSelects.forEach(selectBox => {
+        selectBox.addEventListener("change", updateDiagnostico);
+    });
+
+    // Desabilita estado caso Tipo esteja preenchido como "Não contém"
+    const configTipoEstado = [
+        { tipoName: "fonte_tipo", estadoName: "fonte_estado" },
+        { tipoName: "armazenamento_tipo", estadoName: "armazenamento_estado" }
+    ];
+
+    configTipoEstado.forEach(cfg => {
+        const selTipo = document.querySelector(`select[name="${cfg.tipoName}"]`);
+        const selEstado = document.querySelector(`select[name="${cfg.estadoName}"]`);
+        if (selTipo && selEstado) {
+            selTipo.addEventListener('change', function() {
+                if (this.value === 'Não contém' || this.value === 'Não contém RAM') {
+                    selEstado.value = 'Não contém';
+                    selEstado.style.pointerEvents = 'none';
+                    selEstado.style.opacity = '0.5';
+                    
+                    if (cfg.tipoName === "armazenamento_tipo") {
+                        const cap = document.querySelector(`input[name="armazenamento_capacidade"]`);
+                        if(cap) {
+                            cap.value = '';
+                            cap.disabled = true;
+                            cap.style.opacity = '0.5';
+                        }
+                    }
+                } else {
+                    if (selEstado.value === 'Não contém') selEstado.value = 'Bom';
+                    selEstado.style.pointerEvents = 'auto';
+                    selEstado.style.opacity = '1';
+                    
+                    if (cfg.tipoName === "armazenamento_tipo") {
+                        const cap = document.querySelector(`input[name="armazenamento_capacidade"]`);
+                        if(cap) {
+                            cap.disabled = false;
+                            cap.style.opacity = '1';
+                        }
+                    }
+                }
+                updateDiagnostico();
+            });
+            // Force trigger on load
+            selTipo.dispatchEvent(new Event('change'));
+        }
+    });
+
+    const tipoEquipamento = document.querySelector('select[name="tipo_equipamento"]');
+    const hardwareCards = document.querySelectorAll('.hardware-card');
+    const labelEquipamento = document.getElementById('labelEquipamento');
+    const cardEquipamento = document.getElementById('cardEquipamento');
+
+    if (tipoEquipamento) {
+        tipoEquipamento.addEventListener('change', function() {
+            const isDesktop = this.value === 'Desktop';
+            const modeloContainer = document.getElementById('modeloContainer');
+            
+            // Toggle Hardware cards
+            hardwareCards.forEach(card => {
+                card.style.display = isDesktop ? 'block' : 'none';
+            });
+
+            // Update label and input for Modelo
+            if (labelEquipamento) {
+                labelEquipamento.innerText = isDesktop ? 'Gabinete' : this.value;
+            }
+
+            if (modeloContainer) {
+                if (isDesktop) {
+                    modeloContainer.innerHTML = `
+                        <select name="equipamento_modelo" class="form-select">
+                            <option value="Grande">Grande</option>
+                            <option value="Slim">Slim</option>
+                        </select>
+                    `;
+                } else {
+                    modeloContainer.innerHTML = `
+                        <input type="text" name="equipamento_modelo" class="form-control" placeholder="Modelo do ${this.value}">
+                    `;
+                }
+            }
+
+            updateDiagnostico();
+        });
+        // Run once on init
+        tipoEquipamento.dispatchEvent(new Event('change'));
+    }
+
+    const ramAusenteCheck = document.querySelector('input[name="ram_ausente"]');
+    if(ramAusenteCheck) {
+        ramAusenteCheck.addEventListener('change', function() {
+            if (this.checked) {
+                ramQtdInput.value = 0;
+                ramQtdInput.disabled = true;
+                ramQtdInput.style.opacity = '0.5';
+                pentesRam = [];
+                renderRamList();
+            } else {
+                ramQtdInput.disabled = false;
+                ramQtdInput.style.opacity = '1';
+                if (parseInt(ramQtdInput.value) === 0) {
+                    ramQtdInput.value = 1;
+                    ramQtdInput.dispatchEvent(new Event('input'));
+                }
+            }
+            updateDiagnostico();
+        });
+        // Init state
+        ramAusenteCheck.dispatchEvent(new Event('change'));
+    }
+    
+    // Initial call to set up diagnostic
+    updateDiagnostico();
+});
+</script>
+{% endblock %}

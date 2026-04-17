@@ -71,7 +71,6 @@
     }
 </style>
 
-<div class="d-flex flex-column flex-grow-1">
     <!-- Navbar moderna -->
     <nav class="navbar navbar-expand-lg navbar-light navbar-glass py-3 sticky-top">
       <div class="container">
@@ -85,10 +84,6 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <!-- Menu principal à esquerda -->
           <ul class="navbar-nav me-auto gap-1 mt-3 mt-lg-0">
-            <li class="nav-item">
-              <a class="nav-link" href="{% url 'index' %}"><i class="bi bi-house-door me-1 text-muted"></i>Início</a>
-            </li>
-
             <!-- Cadastro -->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-plus-square me-1 text-muted"></i>Cadastro</a>
@@ -103,11 +98,12 @@
 
             <!-- Relatórios -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-bar-chart-line me-1 text-muted"></i>Relatório de insumos</a>
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-bar-chart-line me-1 text-muted"></i>Relatórios</a>
               <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'relatorio_estoque' %}"><i class="bi bi-box-seam me-2 text-muted"></i>Estoque de Toners</a></li>
+                <li><a class="dropdown-item" href="{% url 'relatorio_toners' %}"><i class="bi bi-printer me-2 text-muted"></i>Entregas de Toners</a></li>
                 <li><a class="dropdown-item" href="{% url 'pesquisa' %}"><i class="bi bi-table me-2 text-muted"></i>Geral</a></li>
                 <li><a class="dropdown-item" href="{% url 'total_unidade' %}"><i class="bi bi-building-check me-2 text-muted"></i>Total por Unidade</a></li>
-                <li><a class="dropdown-item" href="{% url 'relatorio_toners' %}"><i class="bi bi-printer me-2 text-muted"></i>Total por Suprimento</a></li>
               </ul>
             </li>
 
@@ -130,6 +126,16 @@
                 <li><a class="dropdown-item" href="{% url 'quantidade_maquina_por_unidade' %}"><i class="bi bi-pie-chart me-2 text-muted"></i>Relatório Geral</a></li>
                 <li><a class="dropdown-item" href="{% url 'consolidado_maquinas' %}"><i class="bi bi-laptop me-2 text-muted"></i>Cadastro máquinas</a></li>
                 <li><a class="dropdown-item" href="{% url 'consolidado_equipamentos' %}"><i class="bi bi-router me-2 text-muted"></i>Cadastro Equipamentos</a></li>
+              </ul>
+            </li>
+
+            <!-- Manutenção -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-tools me-1 text-muted"></i>Manutenção</a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'novo_ticket' %}"><i class="bi bi-ticket-detailed me-2 text-muted"></i>Novo ticket</a></li>
+                <li><a class="dropdown-item" href="{% url 'relatorio_tickets' %}"><i class="bi bi-journal-text me-2 text-muted"></i>Histórico</a></li>
+                <li><a class="dropdown-item" href="{% url 'relatorio_pecas_defeituosas' %}"><i class="bi bi-box-seam me-2 text-muted"></i>Resumo de Peças</a></li>
               </ul>
             </li>
           </ul>
@@ -156,27 +162,15 @@
         </div>
       </div>
     </nav>
+{% endblock %}
 
-    <!-- Conteúdo Principal -->
-    <div class="container flex-grow-1 fade-in py-4">
-        {% block content %}
-        <!-- Estado Inicial quando não está injetando conteúdo (Página inicial) -->
-        <div class="hero-section">
-            <div class="mb-4">
-                <i class="bi bi-diagram-3 text-primary" style="font-size: 3.5rem; opacity: 0.9;"></i>
-            </div>
-            <h1 class="hero-title">Controle de Infraestrutura</h1>
-
-        </div>
-        {% endblock %}
+{% block content %}
+<!-- Estado Inicial quando não está injetando conteúdo (Página inicial) -->
+<div class="hero-section">
+    <div class="mb-4">
+        <i class="bi bi-diagram-3 text-primary" style="font-size: 3.5rem; opacity: 0.9;"></i>
     </div>
+    <h1 class="hero-title">Controle de Infraestrutura</h1>
 
-    <!-- Rodapé -->
-    <footer class="bg-white border-top text-center py-4 mt-auto">
-      <div class="container text-muted small">
-          <i class="bi bi-shield-check text-success me-1"></i> Desenvolvido por Infra ECO &copy; {% now "Y" %} <br>
-          <span style="opacity: 0.7;">Sistema de Gestão Sustentável e Eficiente</span>
-      </div>
-    </footer>
 </div>
 {% endblock %}
