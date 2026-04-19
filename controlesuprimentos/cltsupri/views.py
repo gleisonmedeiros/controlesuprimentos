@@ -1592,7 +1592,7 @@ def consolidado_equipamentos(request):
 
 import json
 from datetime import date
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import TicketManutencao
@@ -1636,6 +1636,27 @@ def novo_ticket(request):
         
     return render(request, 'novo_ticket.html', {'form': form})
 
+@login_required(login_url='login')
+def editar_ticket(request, pk):
+    ticket = get_object_or_404(TicketManutencao, pk=pk)
+    if request.method == 'POST':
+        form = TicketManutencaoForm(request.POST, instance=ticket)
+        if form.is_valid():
+            t = form.save(commit=False)
+            pentes_json = request.POST.get('ram_pentes_detalhes_json', '[]')
+            try:
+                t.ram_pentes_detalhes = json.loads(pentes_json)
+            except:
+                t.ram_pentes_detalhes = []
+            t.save()
+            messages.success(request, f"Ticket {t.ticket_id} atualizado com sucesso!")
+            return redirect('relatorio_tickets')
+        else:
+            messages.error(request, "Erro ao atualizar ticket. Verifique os campos.")
+    else:
+        form = TicketManutencaoForm(instance=ticket)
+    return render(request, 'novo_ticket.html', {'form': form, 'ticket': ticket})
+
 from collections import defaultdict
 
 @login_required(login_url='login')
@@ -1647,47 +1668,45 @@ def relatorio_tickets(request):
 @login_required(login_url='login')
 def relatorio_pecas_defeituosas(request):
     from .models import TicketManutencao
-    tickets = TicketManutencao.objects.all()
-    
-    # Resumo quantitativo sem repetir especificações
-    pecas_ruins = defaultdict(int)
-    pecas_necessarias = defaultdict(int)
+    tickets = TicketManutencao.objects.filter(status__in=['ABERTO', 'AGUARDANDO PEÇAS'])
+
+    pecas_ruins = defaultdict(lambda: {'total': 0, 'tickets': []})
+    pecas_necessarias = defaultdict(lambda: {'total': 0, 'tickets': []})
+
+    def add(d, key, ticket_id):
+        d[key]['total'] += 1
+        d[key]['tickets'].append(ticket_id)
 
     for t in tickets:
         is_desktop = t.tipo_equipamento == 'Desktop'
-        
-        # Gabinete / Equipamento Geral
+        tipo_display = 'Gabinete' if is_desktop else t.tipo_equipamento
+
         if t.gabinete_estado == 'Ruim':
             if is_desktop:
-                key = f"{t.tipo_equipamento} ({t.equipamento_marca} {t.equipamento_modelo})"
+                key = f"{tipo_display} ({t.equipamento_modelo})"
             else:
-                # Para outros equipamentos, agrupar apenas por Tipo e Modelo (ignorar marca na soma)
-                key = f"{t.tipo_equipamento} ({t.equipamento_modelo})"
-            pecas_ruins[key] += 1
+                key = f"{tipo_display} ({t.equipamento_modelo})"
+            add(pecas_ruins, key, t.ticket_id)
 
         if is_desktop:
-            # Processador
             if t.processador_estado == 'Ruim':
                 key = f"Processador {t.processador_nome or ''} ({t.processador_socket or ''})"
-                pecas_ruins[key] += 1
+                add(pecas_ruins, key, t.ticket_id)
 
-            # Placa-Mãe
             if t.placa_mae_estado == 'Ruim':
                 key = f"Placa-Mãe ({t.processador_socket or ''} / {t.ram_tipo or ''})"
-                pecas_ruins[key] += 1
+                add(pecas_ruins, key, t.ticket_id)
 
-            # Armazenamento
             if t.armazenamento_estado == 'Ruim':
                 key = f"{t.armazenamento_tipo or ''} {t.armazenamento_capacidade or ''}"
-                pecas_ruins[key] += 1
+                add(pecas_ruins, key, t.ticket_id)
             elif t.armazenamento_estado == 'Não contém':
                 key = "Unidade de Armazenamento (Necessário)"
-                pecas_necessarias[key] += 1
+                add(pecas_necessarias, key, t.ticket_id)
 
-            # Memória RAM
             if t.ram_ausente:
                 key = f"Memória RAM {t.ram_tipo or ''} (Necessária)"
-                pecas_necessarias[key] += 1
+                add(pecas_necessarias, key, t.ticket_id)
             else:
                 for pente in t.ram_pentes_detalhes:
                     if pente.get('estado') == 'Ruim':
@@ -1695,29 +1714,29 @@ def relatorio_pecas_defeituosas(request):
                         if capacidade.isdigit():
                             capacidade += "GB"
                         key = f"Memória RAM {t.ram_tipo or ''} {capacidade}"
-                        pecas_ruins[key.strip()] += 1
+                        add(pecas_ruins, key.strip(), t.ticket_id)
 
-            # Fonte
             if t.fonte_estado == 'Ruim':
                 key = f"Fonte {t.fonte_tipo or ''}"
-                pecas_ruins[key] += 1
+                add(pecas_ruins, key, t.ticket_id)
             elif t.fonte_estado == 'Não contém':
                 key = "Fonte (Necessária)"
-                pecas_necessarias[key] += 1
+                add(pecas_necessarias, key, t.ticket_id)
 
-            # Cooler
             if t.cooler_estado == 'Ruim':
                 key = f"Cooler ({t.processador_socket or ''})"
-                pecas_ruins[key] += 1
+                add(pecas_ruins, key, t.ticket_id)
 
-    # Converter para lista ordenada
-    lista_ruins = sorted([{'nome': k, 'total': v} for k, v in pecas_ruins.items()], key=lambda x: x['nome'])
-    lista_necessarias = sorted([{'nome': k, 'total': v} for k, v in pecas_necessarias.items()], key=lambda x: x['nome'])
+    lista_ruins = sorted([{'nome': k, 'total': v['total'], 'tickets': v['tickets']} for k, v in pecas_ruins.items()], key=lambda x: x['nome'])
+    lista_necessarias = sorted([{'nome': k, 'total': v['total'], 'tickets': v['tickets']} for k, v in pecas_necessarias.items()], key=lambda x: x['nome'])
+
+    condenados = TicketManutencao.objects.filter(status='CONDENADO').order_by('-data_abertura')
 
     context = {
         'lista_ruins': lista_ruins,
         'lista_necessarias': lista_necessarias,
-        'total_tickets': tickets.count()
+        'total_tickets': tickets.count(),
+        'condenados': condenados,
     }
     return render(request, 'relatorio_pecas.html', context)
 

@@ -227,6 +227,7 @@ class TicketManutencao(models.Model):
         ('ABERTO', 'Aberto'),
         ('AGUARDANDO PEÇAS', 'Aguardando Peças'),
         ('FINALIZADO', 'Finalizado'),
+        ('CONDENADO', 'Condenado'),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ABERTO', verbose_name="Status")
 

@@ -4,7 +4,8 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold"><i class="bi bi-journal-text"></i> Histórico de Tickets</h2>
-        <div>
+        <div class="d-flex gap-2">
+            <button onclick="printCards()" class="btn btn-outline-secondary"><i class="bi bi-printer"></i> Imprimir Cards</button>
             <a href="{% url 'novo_ticket' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo Ticket</a>
             <a href="{% url 'relatorio_pecas_defeituosas' %}" class="btn btn-warning"><i class="bi bi-box-seam"></i> Resumo de Peças</a>
         </div>
@@ -16,30 +17,44 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th class="ps-4">Data</th>
+                            <th class="ps-3">
+                                <input type="checkbox" id="checkAll" title="Marcar todos" style="cursor:pointer;">
+                            </th>
+                            <th>Data</th>
                             <th>ID Ticket</th>
                             <th>Técnico</th>
                             <th>Status</th>
                             <th>Equipamento</th>
                             <th>Marca / Modelo</th>
+                            <th>Informações</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ticket in tickets %}
-                        <tr>
-                            <td class="ps-4">
+                        <tr class="ticket-row"
+                            data-ticket-id="{{ ticket.ticket_id }}"
+                            data-tecnico="{{ ticket.tecnico|escapejs }}"
+                            data-data="{{ ticket.data_abertura|date:'d/m/Y' }}"
+                            data-diagnostico="{{ ticket.diagnostico|escapejs }}"
+                            data-observacoes="{{ ticket.observacoes|escapejs }}">
+                            <td class="ps-3">
+                                <input type="checkbox" class="ticket-check" style="cursor:pointer;">
+                            </td>
+                            <td>
                                 <div class="small text-muted">{{ ticket.data_abertura|date:"d/m/Y" }}</div>
                             </td>
                             <td><span class="badge bg-secondary">{{ ticket.ticket_id }}</span></td>
+                            <td>{{ ticket.tecnico }}</td>
                             <td>
-                                <select class="form-select form-select-sm status-select fw-bold" 
+                                <select class="form-select form-select-sm status-select fw-bold"
                                         data-id="{{ ticket.id }}"
                                         onchange="updateStatus(this)"
                                         style="width: 150px; border-radius: 20px;">
                                     <option value="ABERTO" {% if ticket.status == 'ABERTO' %}selected{% endif %} class="text-primary">Aberto</option>
                                     <option value="AGUARDANDO PEÇAS" {% if ticket.status == 'AGUARDANDO PEÇAS' %}selected{% endif %} class="text-warning">Aguardando Peças</option>
                                     <option value="FINALIZADO" {% if ticket.status == 'FINALIZADO' %}selected{% endif %} class="text-success">Finalizado</option>
+                                    <option value="CONDENADO" {% if ticket.status == 'CONDENADO' %}selected{% endif %} class="text-danger">Condenado</option>
                                 </select>
                             </td>
                             <td>
@@ -49,15 +64,22 @@
                             </td>
                             <td>{{ ticket.equipamento_marca }} / {{ ticket.equipamento_modelo }}</td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-outline-info rounded-pill px-3" 
+                                <button class="btn btn-sm btn-outline-info rounded-pill px-3"
                                         onclick="showDetails('{{ ticket.ticket_id }}', '{{ ticket.tecnico }}', '{{ ticket.data_abertura|date:'d/m/Y' }}', '{{ ticket.diagnostico|escapejs }}', '{{ ticket.observacoes|escapejs }}')">
                                     <i class="bi bi-eye"></i> Detalhes
                                 </button>
                             </td>
+                            <td class="text-center">
+                                {% if ticket.status != 'FINALIZADO' %}
+                                <a href="{% url 'editar_ticket' ticket.pk %}" class="btn btn-sm btn-outline-warning rounded-pill px-3">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </a>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center py-5">
+                            <td colspan="9" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="bi bi-info-circle fs-2 d-block mb-3"></i>
                                     Nenhum ticket encontrado.
@@ -95,6 +117,7 @@
                 </div>
             </div>
             <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary rounded-pill" onclick="printModal()"><i class="bi bi-printer me-1"></i>Imprimir</button>
                 <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
@@ -102,44 +125,98 @@
 </div>
 
 <script>
+    const CARD_STYLE = `
+        @page { size: A4; margin: 8mm; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 8px; background: #fff; }
+        .grid { display: flex; flex-wrap: wrap; gap: 4mm; }
+        .card { border: 1.5px solid #333; border-radius: 4px; padding: 3px 5px; display: flex; flex-direction: column; gap: 3px; width: 8cm; break-inside: avoid; }
+        .ticket-id { font-size: 12px; font-weight: bold; color: #0d6efd; line-height: 1.2; }
+        .meta { font-size: 7px; color: #555; }
+        .divider { border-top: 1px solid #ccc; }
+        .label { font-size: 7px; font-weight: bold; color: #888; text-transform: uppercase; }
+        .diag { background: #f0f4ff; border-left: 2px solid #0d6efd; padding: 2px 4px; font-size: 7.5px; white-space: pre-wrap; line-height: 1.3; }
+        .obs  { background: #f8f8f8; border-left: 2px solid #aaa; padding: 2px 4px; font-size: 7.5px; white-space: pre-wrap; line-height: 1.3; }
+    `;
+
+    function buildCard(id, tecnico, data, diag, obs) {
+        return `<div class="card">
+            <div class="ticket-id">Ticket: ${id}</div>
+            <div class="meta">${tecnico} | ${data}</div>
+            <div class="divider"></div>
+            <div class="label">Diagnóstico</div>
+            <div class="diag">${diag || '-'}</div>
+            <div class="label">Observações</div>
+            <div class="obs">${obs || 'Nenhuma observação registrada.'}</div>
+        </div>`;
+    }
+
+    function openPrintWindow(cards) {
+        const w = window.open('', '_blank');
+        w.document.write(`<!DOCTYPE html><html><head><style>${CARD_STYLE}</style></head><body><div class="grid">${cards}</div></body></html>`);
+        w.document.close();
+        w.print();
+    }
+
+    function fromAttr(s) {
+        return (s || '').replace(/\\u000D\\u000A|\\r\\n|\\n|\\r/g, '\n');
+    }
+
+    function printCards() {
+        const checked = [...document.querySelectorAll('.ticket-check:checked')];
+        const rows = checked.length > 0
+            ? checked.map(cb => cb.closest('tr'))
+            : [...document.querySelectorAll('.ticket-row')];
+
+        if (rows.length === 0) return;
+
+        const html = rows.map(row => buildCard(
+            row.dataset.ticketId,
+            row.dataset.tecnico,
+            row.dataset.data,
+            fromAttr(row.dataset.diagnostico),
+            fromAttr(row.dataset.observacoes)
+        )).join('');
+
+        openPrintWindow(html);
+    }
+
+    function printModal() {
+        const html = buildCard(
+            document.getElementById('modalTitle').innerText.replace('Ticket: ', ''),
+            document.getElementById('modalTecnico').innerText,
+            document.getElementById('modalData').innerText,
+            document.getElementById('modalDiagnostico').innerText,
+            document.getElementById('modalObservacoes').innerText
+        );
+        openPrintWindow(html);
+    }
+
     function updateStatus(select) {
         const ticketId = select.getAttribute('data-id');
         const newStatus = select.value;
-        
-        // Efeito visual imediato
         select.style.opacity = '0.5';
-        
         fetch(`/controlesupri/ticket/${ticketId}/status/`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
             body: JSON.stringify({ status: newStatus })
         })
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
             select.style.opacity = '1';
-            if (data.success) {
-                // Sucesso
-                applyStatusColors(select);
-            } else {
-                alert('Erro ao atualizar status: ' + data.error);
-            }
+            if (data.success) applyStatusColors(select);
+            else alert('Erro ao atualizar status: ' + data.error);
         })
-        .catch(error => {
-            select.style.opacity = '1';
-            console.error('Error:', error);
-            alert('Erro de conexão ao atualizar status.');
-        });
+        .catch(() => { select.style.opacity = '1'; alert('Erro de conexão ao atualizar status.'); });
     }
 
     function applyStatusColors(select) {
         const val = select.value;
-        select.classList.remove('text-primary', 'text-warning', 'text-success');
+        select.classList.remove('text-primary', 'text-warning', 'text-success', 'text-danger');
         if (val === 'ABERTO') select.classList.add('text-primary');
         if (val === 'AGUARDANDO PEÇAS') select.classList.add('text-warning');
         if (val === 'FINALIZADO') select.classList.add('text-success');
+        if (val === 'CONDENADO') select.classList.add('text-danger');
     }
 
     function showDetails(id, tecnico, data, diagnostico, observacoes) {
@@ -148,14 +225,15 @@
         document.getElementById('modalData').innerText = data;
         document.getElementById('modalDiagnostico').innerText = diagnostico;
         document.getElementById('modalObservacoes').innerText = observacoes || "Nenhuma observação registrada.";
-        
-        const myModal = new bootstrap.Modal(document.getElementById('detailsModal'));
-        myModal.show();
+        new bootstrap.Modal(document.getElementById('detailsModal')).show();
     }
 
-    // Inicializa cores dos selects
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.status-select').forEach(applyStatusColors);
+
+        document.getElementById('checkAll').addEventListener('change', function() {
+            document.querySelectorAll('.ticket-check').forEach(cb => cb.checked = this.checked);
+        });
     });
 </script>
 {% endblock %}

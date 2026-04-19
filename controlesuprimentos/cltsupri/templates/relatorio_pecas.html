@@ -5,11 +5,11 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold mb-1"><i class="bi bi-box-seam"></i> Resumo de Peças para Reposição</h2>
-            <p class="text-muted">Consolidado quantitativo baseado em {{ total_tickets }} tickets abertos.</p>
+            <p class="text-muted">Consolidado quantitativo baseado em <span id="total-tickets">{{ total_tickets }}</span> tickets abertos.</p>
         </div>
         <div>
             <a href="{% url 'relatorio_tickets' %}" class="btn btn-outline-secondary d-print-none"><i class="bi bi-arrow-left"></i> Voltar aos Tickets</a>
-            <button onclick="window.print()" class="btn btn-info text-white d-print-none"><i class="bi bi-printer"></i> Imprimir</button>
+            <button onclick="printRelatorio()" class="btn btn-info text-white"><i class="bi bi-printer"></i> Imprimir</button>
         </div>
     </div>
 
@@ -28,7 +28,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-sm table-borderless align-middle">
+                        <table id="tabela-ruins" class="table table-sm table-borderless align-middle">
                             <thead class="text-secondary small text-uppercase">
                                 <tr>
                                     <th>Especificação da Peça</th>
@@ -37,9 +37,16 @@
                             </thead>
                             <tbody>
                                 {% for item in lista_ruins %}
-                                <tr class="border-bottom">
-                                    <td class="py-3 fw-semibold">{{ item.nome }}</td>
-                                    <td class="text-end py-3">
+                                <tr class="border-bottom" data-nome="{{ item.nome }}" data-total="{{ item.total }}">
+                                    <td class="py-2 fw-semibold">
+                                        {{ item.nome }}
+                                        <div class="mt-1">
+                                            {% for tid in item.tickets %}
+                                            <a href="{% url 'relatorio_tickets' %}" class="badge bg-secondary text-white text-decoration-none me-1 tid" style="font-size:0.65rem; font-weight:500;">{{ tid }}</a>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="text-end py-2">
                                         <span class="badge bg-danger fs-6 px-3">{{ item.total }}</span>
                                     </td>
                                 </tr>
@@ -63,7 +70,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-sm table-borderless align-middle">
+                        <table id="tabela-necessarias" class="table table-sm table-borderless align-middle">
                             <thead class="text-secondary small text-uppercase">
                                 <tr>
                                     <th>O que o Equipamento Necessita</th>
@@ -72,15 +79,75 @@
                             </thead>
                             <tbody>
                                 {% for item in lista_necessarias %}
-                                <tr class="border-bottom">
-                                    <td class="py-3 fw-semibold">{{ item.nome }}</td>
-                                    <td class="text-end py-3">
+                                <tr class="border-bottom" data-nome="{{ item.nome }}" data-total="{{ item.total }}">
+                                    <td class="py-2 fw-semibold">
+                                        {{ item.nome }}
+                                        <div class="mt-1">
+                                            {% for tid in item.tickets %}
+                                            <a href="{% url 'relatorio_tickets' %}" class="badge bg-secondary text-white text-decoration-none me-1 tid" style="font-size:0.65rem; font-weight:500;">{{ tid }}</a>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="text-end py-2">
                                         <span class="badge bg-warning text-dark fs-6 px-3">{{ item.total }}</span>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
                                     <td colspan="2" class="text-center py-4 text-muted">Nenhuma falta registrada.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO: EQUIPAMENTOS CONDENADOS -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 12px; border-left: 5px solid #6c757d !important;">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 fw-bold text-secondary"><i class="bi bi-slash-circle"></i> Equipamentos Condenados</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table id="tabela-condenados" class="table table-sm table-borderless align-middle mb-0">
+                            <thead class="text-secondary small text-uppercase bg-light">
+                                <tr>
+                                    <th class="ps-3">Ticket</th>
+                                    <th>Data</th>
+                                    <th>Técnico</th>
+                                    <th>Equipamento</th>
+                                    <th>Marca / Modelo</th>
+                                    <th>Diagnóstico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for t in condenados %}
+                                <tr class="border-bottom"
+                                    data-ticket="{{ t.ticket_id }}"
+                                    data-data="{{ t.data_abertura|date:'d/m/Y' }}"
+                                    data-tecnico="{{ t.tecnico }}"
+                                    data-equip="{{ t.tipo_equipamento }}"
+                                    data-marcamodelo="{{ t.equipamento_marca }} / {{ t.equipamento_modelo }}"
+                                    data-diag="{{ t.diagnostico|default:'' }}">
+                                    <td class="ps-3 py-2">
+                                        <a href="{% url 'relatorio_tickets' %}" class="badge bg-secondary text-white text-decoration-none" style="font-size:0.75rem;">{{ t.ticket_id }}</a>
+                                    </td>
+                                    <td class="py-2 small text-muted">{{ t.data_abertura|date:"d/m/Y" }}</td>
+                                    <td class="py-2">{{ t.tecnico }}</td>
+                                    <td class="py-2">
+                                        <span class="badge {% if t.tipo_equipamento == 'Desktop' %}bg-info text-dark{% else %}bg-primary{% endif %}">{{ t.tipo_equipamento }}</span>
+                                    </td>
+                                    <td class="py-2">{{ t.equipamento_marca }} / {{ t.equipamento_modelo }}</td>
+                                    <td class="py-2 small text-muted" style="max-width:300px; white-space:pre-wrap;">{{ t.diagnostico|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">Nenhum equipamento condenado.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -104,10 +171,123 @@
     </div>
 </div>
 
-<style>
-    @media print {
-        .btn, .alert { display: none !important; }
-        .card { border: 1px solid #ddd !important; box-shadow: none !important; }
-    }
-</style>
+<script>
+function printRelatorio() {
+    const ruins = [];
+    document.querySelectorAll('#tabela-ruins tr[data-nome]').forEach(tr => {
+        const tickets = [...tr.querySelectorAll('.tid')].map(el => el.innerText).join(', ');
+        ruins.push({ nome: tr.dataset.nome, total: tr.dataset.total, tickets });
+    });
+
+    const necessarias = [];
+    document.querySelectorAll('#tabela-necessarias tr[data-nome]').forEach(tr => {
+        const tickets = [...tr.querySelectorAll('.tid')].map(el => el.innerText).join(', ');
+        necessarias.push({ nome: tr.dataset.nome, total: tr.dataset.total, tickets });
+    });
+
+    const condenados = [];
+    document.querySelectorAll('#tabela-condenados tr[data-ticket]').forEach(tr => {
+        condenados.push({
+            ticket: tr.dataset.ticket,
+            data: tr.dataset.data,
+            tecnico: tr.dataset.tecnico,
+            equip: tr.dataset.equip,
+            marcamodelo: tr.dataset.marcamodelo,
+            diag: tr.dataset.diag,
+        });
+    });
+
+    const now = new Date().toLocaleString('pt-BR');
+    const total = document.getElementById('total-tickets').innerText;
+
+    const rowsRuins = ruins.length
+        ? ruins.map(i => `<tr><td>${i.nome}<br><span class="tid-list">${i.tickets}</span></td><td class="qty red">${i.total}</td></tr>`).join('')
+        : `<tr><td colspan="2" class="empty">Nenhuma peça com defeito registrada.</td></tr>`;
+
+    const rowsNec = necessarias.length
+        ? necessarias.map(i => `<tr><td>${i.nome}<br><span class="tid-list">${i.tickets}</span></td><td class="qty amber">${i.total}</td></tr>`).join('')
+        : `<tr><td colspan="2" class="empty">Nenhuma falta registrada.</td></tr>`;
+
+    const rowsCond = condenados.length
+        ? condenados.map(i => `<tr><td>${i.ticket}</td><td>${i.data}</td><td>${i.tecnico}</td><td>${i.equip}</td><td>${i.marcamodelo}</td><td class="diag-col">${i.diag || '-'}</td></tr>`).join('')
+        : `<tr><td colspan="6" class="empty">Nenhum equipamento condenado.</td></tr>`;
+
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+    <title>Relatório de Peças</title>
+    <style>
+        @page { size: A4; margin: 15mm 12mm; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 10px; color: #222; background: #fff; }
+
+        .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2.5px solid #1d4ed8; padding-bottom: 6px; margin-bottom: 12px; }
+        .header h1 { font-size: 16px; color: #1d4ed8; font-weight: 800; }
+        .header .sub { font-size: 8.5px; color: #666; margin-top: 2px; }
+        .header .meta { text-align: right; font-size: 8px; color: #888; }
+
+        .two-col { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+
+        .section { border: 1px solid #ddd; border-radius: 5px; overflow: hidden; }
+        .section-head { padding: 5px 8px; font-size: 9.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.4px; }
+        .head-red   { background: #fef2f2; color: #b91c1c; border-bottom: 2px solid #ef4444; }
+        .head-amber { background: #fffbeb; color: #b45309; border-bottom: 2px solid #f59e0b; }
+        .head-gray  { background: #f8f9fa; color: #374151; border-bottom: 2px solid #9ca3af; }
+
+        table { width: 100%; border-collapse: collapse; }
+        td, th { padding: 4px 7px; vertical-align: top; }
+        th { font-size: 8px; color: #888; text-transform: uppercase; background: #fafafa; border-bottom: 1px solid #eee; }
+        tr + tr td { border-top: 1px solid #f0f0f0; }
+
+        .qty { text-align: center; font-weight: bold; font-size: 12px; white-space: nowrap; width: 48px; }
+        .qty.red   { color: #dc2626; }
+        .qty.amber { color: #d97706; }
+        .tid-list  { font-size: 7.5px; color: #6b7280; }
+        .diag-col  { font-size: 8px; color: #555; max-width: 120px; word-break: break-word; white-space: pre-wrap; }
+        .empty     { text-align: center; color: #aaa; padding: 10px; font-size: 9px; }
+
+        .footer { margin-top: 14px; font-size: 7.5px; color: #aaa; text-align: center; border-top: 1px solid #eee; padding-top: 5px; }
+    </style></head><body>
+
+    <div class="header">
+        <div>
+            <h1>Relatório de Peças para Reposição</h1>
+            <div class="sub">Consolidado baseado em ${total} tickets abertos</div>
+        </div>
+        <div class="meta">Gerado em: ${now}</div>
+    </div>
+
+    <div class="two-col">
+        <div class="section">
+            <div class="section-head head-red">✖ Peças com Defeito (Ruins)</div>
+            <table>
+                <thead><tr><th>Especificação</th><th style="text-align:center">Qtd</th></tr></thead>
+                <tbody>${rowsRuins}</tbody>
+            </table>
+        </div>
+        <div class="section">
+            <div class="section-head head-amber">+ Peças Necessárias (Faltantes)</div>
+            <table>
+                <thead><tr><th>Necessidade</th><th style="text-align:center">Qtd</th></tr></thead>
+                <tbody>${rowsNec}</tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-head head-gray">⊘ Equipamentos Condenados</div>
+        <table>
+            <thead><tr><th>Ticket</th><th>Data</th><th>Técnico</th><th>Tipo</th><th>Marca/Modelo</th><th>Diagnóstico</th></tr></thead>
+            <tbody>${rowsCond}</tbody>
+        </table>
+    </div>
+
+    <div class="footer">InfraECO &mdash; Documento gerado automaticamente em ${now}</div>
+    </body></html>`;
+
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    w.print();
+}
+</script>
 {% endblock %}

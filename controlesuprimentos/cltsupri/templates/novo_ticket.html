@@ -58,7 +58,10 @@
 
         <div class="card shadow-sm border-0 rounded-4">
             <div class="card-header bg-white border-bottom pt-4 pb-3 px-4">
-                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-ticket-detailed me-2 text-primary"></i>Abertura de Ticket de Suporte</h4>
+                <h4 class="mb-0 fw-bold text-dark">
+                    <i class="bi bi-ticket-detailed me-2 text-primary"></i>
+                    {% if ticket %}Editar Ticket {{ ticket.ticket_id }}{% else %}Abertura de Ticket de Suporte{% endif %}
+                </h4>
             </div>
             
             <div class="card-body p-4 bg-light">
@@ -250,6 +253,7 @@
                         </div>
                         <textarea class="d-none" name="diagnostico" id="diagnosticoInput"></textarea>
                         
+                        <input type="hidden" name="status" value="{% if ticket %}{{ ticket.status }}{% else %}ABERTO{% endif %}">
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold"><i class="bi bi-chat-left-text me-1"></i> Observações Complementares (Opcional):</label>
                             {{ form.observacoes }}
@@ -257,8 +261,11 @@
                     </div>
 
                     <div class="text-end mt-4">
+                        {% if ticket %}
+                        <a href="{% url 'relatorio_tickets' %}" class="btn btn-outline-secondary me-2">Cancelar</a>
+                        {% endif %}
                         <button type="submit" class="btn btn-primary px-5 py-2 fw-bold shadow">
-                            <i class="bi bi-check2-circle me-2"></i>Salvar Tíquete
+                            <i class="bi bi-check2-circle me-2"></i>{% if ticket %}Atualizar Tíquete{% else %}Salvar Tíquete{% endif %}
                         </button>
                     </div>
                 </form>
@@ -267,6 +274,10 @@
     </div>
 </div>
 
+<script>
+    const INITIAL_MODELO = "{{ ticket.equipamento_modelo|default:''|escapejs }}";
+    const INITIAL_PENTES = {{ ticket.ram_pentes_detalhes|default:'[]'|safe }};
+</script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const ramQtdInput = document.querySelector('input[name="ram_qtd_pentes"]');
@@ -278,8 +289,8 @@ document.addEventListener("DOMContentLoaded", function() {
     // Selects
     const estadoSelects = document.querySelectorAll("select.estado-select");
     
-    let pentesRam = [];
-    
+    let pentesRam = (typeof INITIAL_PENTES !== 'undefined' && INITIAL_PENTES.length) ? INITIAL_PENTES : [];
+
     function renderRamList() {
         ramList.innerHTML = "";
         pentesRam.forEach((pente, index) => {
@@ -342,8 +353,11 @@ document.addEventListener("DOMContentLoaded", function() {
             renderRamList();
         });
         
-        // Dispara o evento inicialmente para carregar caso já tenha valor (ex: 1)
-        if (ramQtdInput.value) {
+        // Se vier de edição com pentes já carregados, apenas renderiza; senão dispara pelo input
+        if (pentesRam.length > 0) {
+            ramQtdInput.value = pentesRam.length;
+            renderRamList();
+        } else if (ramQtdInput.value) {
             ramQtdInput.dispatchEvent(new Event('input'));
         }
     }
@@ -517,16 +531,17 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             if (modeloContainer) {
+                const currentModelo = (typeof INITIAL_MODELO !== 'undefined') ? INITIAL_MODELO : '';
                 if (isDesktop) {
                     modeloContainer.innerHTML = `
                         <select name="equipamento_modelo" class="form-select">
-                            <option value="Grande">Grande</option>
-                            <option value="Slim">Slim</option>
+                            <option value="Grande" ${currentModelo === 'Grande' ? 'selected' : ''}>Grande</option>
+                            <option value="Slim" ${currentModelo === 'Slim' ? 'selected' : ''}>Slim</option>
                         </select>
                     `;
                 } else {
                     modeloContainer.innerHTML = `
-                        <input type="text" name="equipamento_modelo" class="form-control" placeholder="Modelo do ${this.value}">
+                        <input type="text" name="equipamento_modelo" class="form-control" placeholder="Modelo do ${this.value}" value="${currentModelo}">
                     `;
                 }
             }
