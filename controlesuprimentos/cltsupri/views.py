@@ -1662,7 +1662,11 @@ from collections import defaultdict
 @login_required(login_url='login')
 def relatorio_tickets(request):
     from .models import TicketManutencao
-    tickets = TicketManutencao.objects.all().order_by('-data_abertura', '-id')
+    from django.core.paginator import Paginator
+    qs = TicketManutencao.objects.all().order_by('-data_abertura', '-id')
+    paginator = Paginator(qs, 15)
+    page = request.GET.get('page', 1)
+    tickets = paginator.get_page(page)
     return render(request, 'relatorio_tickets.html', {'tickets': tickets})
 
 @login_required(login_url='login')
