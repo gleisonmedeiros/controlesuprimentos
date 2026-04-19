@@ -188,6 +188,7 @@ class TicketManutencaoForm(forms.ModelForm):
             'fonte_estado': forms.Select(attrs={'class': 'form-select'}),
             
             'cooler_estado': forms.Select(attrs={'class': 'form-select'}),
+            'impressora_tipo': forms.Select(attrs={'class': 'form-select'}),
             
             'diagnostico': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'readonly': 'readonly'}),
             'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notas adicionais do técnico...'}),

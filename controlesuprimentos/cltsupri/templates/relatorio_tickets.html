@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold"><i class="bi bi-journal-text"></i> Histórico de Tickets</h2>
+        <h5 class="fw-bold mb-0"><i class="bi bi-journal-text"></i> Histórico de Tickets</h5>
         <div class="d-flex gap-2">
             <button onclick="printCards()" class="btn btn-outline-secondary"><i class="bi bi-printer"></i> Imprimir Cards</button>
             <a href="{% url 'novo_ticket' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo Ticket</a>
@@ -51,10 +51,11 @@
                                         data-id="{{ ticket.id }}"
                                         onchange="updateStatus(this)"
                                         style="width: 150px; border-radius: 20px;">
-                                    <option value="ABERTO" {% if ticket.status == 'ABERTO' %}selected{% endif %} class="text-primary">Aberto</option>
-                                    <option value="AGUARDANDO PEÇAS" {% if ticket.status == 'AGUARDANDO PEÇAS' %}selected{% endif %} class="text-warning">Aguardando Peças</option>
-                                    <option value="FINALIZADO" {% if ticket.status == 'FINALIZADO' %}selected{% endif %} class="text-success">Finalizado</option>
-                                    <option value="CONDENADO" {% if ticket.status == 'CONDENADO' %}selected{% endif %} class="text-danger">Condenado</option>
+                                    <option value="ABERTO" {% if ticket.status == 'ABERTO' %}selected{% endif %}>Aberto</option>
+                                    <option value="AGUARDANDO PEÇAS" {% if ticket.status == 'AGUARDANDO PEÇAS' %}selected{% endif %}>Aguardando Peças</option>
+                                    <option value="ENV. ASS. TECNICA" {% if ticket.status == 'ENV. ASS. TECNICA' %}selected{% endif %}>Enviado Ass. Técnica</option>
+                                    <option value="FINALIZADO" {% if ticket.status == 'FINALIZADO' %}selected{% endif %}>Finalizado</option>
+                                    <option value="CONDENADO" {% if ticket.status == 'CONDENADO' %}selected{% endif %}>Condenado</option>
                                 </select>
                             </td>
                             <td>
@@ -212,9 +213,11 @@
 
     function applyStatusColors(select) {
         const val = select.value;
-        select.classList.remove('text-primary', 'text-warning', 'text-success', 'text-danger');
+        select.classList.remove('text-primary', 'text-warning', 'text-success', 'text-danger', 'text-purple');
+        select.style.color = '';
         if (val === 'ABERTO') select.classList.add('text-primary');
         if (val === 'AGUARDANDO PEÇAS') select.classList.add('text-warning');
+        if (val === 'ENV. ASS. TECNICA') select.style.color = '#7c3aed';
         if (val === 'FINALIZADO') select.classList.add('text-success');
         if (val === 'CONDENADO') select.classList.add('text-danger');
     }

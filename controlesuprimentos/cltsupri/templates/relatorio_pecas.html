@@ -4,7 +4,7 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold mb-1"><i class="bi bi-box-seam"></i> Resumo de Peças para Reposição</h2>
+            <h5 class="fw-bold mb-1"><i class="bi bi-box-seam"></i> Resumo de Peças para Reposição</h5>
             <p class="text-muted">Consolidado quantitativo baseado em <span id="total-tickets">{{ total_tickets }}</span> tickets abertos.</p>
         </div>
         <div>
@@ -95,6 +95,66 @@
                                 {% empty %}
                                 <tr>
                                     <td colspan="2" class="text-center py-4 text-muted">Nenhuma falta registrada.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO: IMPRESSORAS -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 12px; border-left: 5px solid #6366f1 !important;">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 fw-bold" style="color:#6366f1;"><i class="bi bi-printer"></i> Impressoras em Atendimento</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table id="tabela-impressoras" class="table table-sm table-borderless align-middle mb-0">
+                            <thead class="text-secondary small text-uppercase bg-light">
+                                <tr>
+                                    <th class="ps-3">Ticket</th>
+                                    <th>Data</th>
+                                    <th>Técnico</th>
+                                    <th>Tipo</th>
+                                    <th>Marca / Modelo</th>
+                                    <th>Status</th>
+                                    <th>Diagnóstico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for t in impressoras %}
+                                <tr class="border-bottom"
+                                    data-ticket="{{ t.ticket_id }}"
+                                    data-data="{{ t.data_abertura|date:'d/m/Y' }}"
+                                    data-tecnico="{{ t.tecnico }}"
+                                    data-tipo="{{ t.impressora_tipo|default:'-' }}"
+                                    data-status="{{ t.get_status_display }}"
+                                    data-marcamodelo="{{ t.equipamento_marca }} / {{ t.equipamento_modelo }}"
+                                    data-diag="{{ t.diagnostico|default:'' }}">
+                                    <td class="ps-3 py-2">
+                                        <a href="{% url 'relatorio_tickets' %}" class="badge bg-secondary text-white text-decoration-none" style="font-size:0.75rem;">{{ t.ticket_id }}</a>
+                                    </td>
+                                    <td class="py-2 small text-muted">{{ t.data_abertura|date:"d/m/Y" }}</td>
+                                    <td class="py-2">{{ t.tecnico }}</td>
+                                    <td class="py-2"><span class="badge" style="background:#6366f1;">{{ t.impressora_tipo|default:"-" }}</span></td>
+                                    <td class="py-2">{{ t.equipamento_marca }} / {{ t.equipamento_modelo }}</td>
+                                    <td class="py-2">
+                                        {% if t.status == 'ABERTO' %}<span class="badge bg-primary">Aberto</span>
+                                        {% elif t.status == 'AGUARDANDO PEÇAS' %}<span class="badge bg-warning text-dark">Aguardando Peças</span>
+                                        {% elif t.status == 'ENV. ASS. TECNICA' %}<span class="badge" style="background:#7c3aed;">Env. Ass. Técnica</span>
+                                        {% elif t.status == 'CONDENADO' %}<span class="badge bg-danger">Condenado</span>
+                                        {% else %}<span class="badge bg-secondary">{{ t.status }}</span>{% endif %}
+                                    </td>
+                                    <td class="py-2 small text-muted" style="max-width:300px; white-space:pre-wrap;">{{ t.diagnostico|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">Nenhuma impressora em atendimento.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -197,6 +257,19 @@ function printRelatorio() {
         });
     });
 
+    const impressoras = [];
+    document.querySelectorAll('#tabela-impressoras tr[data-ticket]').forEach(tr => {
+        impressoras.push({
+            ticket: tr.dataset.ticket,
+            data: tr.dataset.data,
+            tecnico: tr.dataset.tecnico,
+            tipo: tr.dataset.tipo,
+            marcamodelo: tr.dataset.marcamodelo,
+            status: tr.dataset.status,
+            diag: tr.dataset.diag,
+        });
+    });
+
     const now = new Date().toLocaleString('pt-BR');
     const total = document.getElementById('total-tickets').innerText;
 
@@ -211,6 +284,10 @@ function printRelatorio() {
     const rowsCond = condenados.length
         ? condenados.map(i => `<tr><td>${i.ticket}</td><td>${i.data}</td><td>${i.tecnico}</td><td>${i.equip}</td><td>${i.marcamodelo}</td><td class="diag-col">${i.diag || '-'}</td></tr>`).join('')
         : `<tr><td colspan="6" class="empty">Nenhum equipamento condenado.</td></tr>`;
+
+    const rowsImpr = impressoras.length
+        ? impressoras.map(i => `<tr><td>${i.ticket}</td><td>${i.data}</td><td>${i.tecnico}</td><td>${i.tipo}</td><td>${i.marcamodelo}</td><td>${i.status}</td><td class="diag-col">${i.diag || '-'}</td></tr>`).join('')
+        : `<tr><td colspan="7" class="empty">Nenhuma impressora em atendimento.</td></tr>`;
 
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>Relatório de Peças</title>
@@ -270,6 +347,14 @@ function printRelatorio() {
                 <tbody>${rowsNec}</tbody>
             </table>
         </div>
+    </div>
+
+    <div class="section" style="border-left:3px solid #6366f1;">
+        <div class="section-head" style="background:#f5f3ff;color:#4338ca;border-bottom:2px solid #6366f1;">&#128424; Impressoras em Atendimento</div>
+        <table>
+            <thead><tr><th>Ticket</th><th>Data</th><th>Técnico</th><th>Tipo</th><th>Marca/Modelo</th><th>Status</th><th>Diagnóstico</th></tr></thead>
+            <tbody>${rowsImpr}</tbody>
+        </table>
     </div>
 
     <div class="section">

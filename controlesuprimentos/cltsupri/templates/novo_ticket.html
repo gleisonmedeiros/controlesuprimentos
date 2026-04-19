@@ -102,11 +102,22 @@
                                     <input type="text" name="equipamento_modelo" class="form-control" placeholder="Modelo do equipamento">
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4" id="colEstadoGeral">
                                 <label class="form-label">Estado Geral</label>
-                                <select name="gabinete_estado" class="form-select estado-select" data-component="Gabinete">
+                                <select name="gabinete_estado" class="form-select estado-select" data-component="Gabinete" id="selectEstadoGeral">
                                     {% for val, text in form.fields.gabinete_estado.choices %}
                                         <option value="{{ val }}" {% if val == form.gabinete_estado.value %}selected{% endif %}>{{ text }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <!-- CAMPO EXCLUSIVO: IMPRESSORA -->
+                        <div class="row g-3 mt-1" id="rowImpressora" style="display:none;">
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de Impressora</label>
+                                <select name="impressora_tipo" class="form-select">
+                                    {% for val, text in form.fields.impressora_tipo.choices %}
+                                        <option value="{{ val }}" {% if val == form.impressora_tipo.value %}selected{% endif %}>{{ text }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -247,17 +258,17 @@
 
                     <!-- DIAGNÓSTICO -->
                     <div class="mt-5">
-                        <h6 class="fw-bold text-danger mb-2"><i class="bi bi-activity me-2"></i>DIAGNÓSTICO AUTOMÁTICO DO TICKET</h6>
-                        <div class="diagnostico-box mb-4" id="diagnosticoDisplay">
-                            [ Sistema pronto aguardando entradas ]
-                        </div>
-                        <textarea class="d-none" name="diagnostico" id="diagnosticoInput"></textarea>
-                        
                         <input type="hidden" name="status" value="{% if ticket %}{{ ticket.status }}{% else %}ABERTO{% endif %}">
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold"><i class="bi bi-chat-left-text me-1"></i> Observações Complementares (Opcional):</label>
                             {{ form.observacoes }}
                         </div>
+
+                        <h6 class="fw-bold text-danger mb-2"><i class="bi bi-activity me-2"></i>DIAGNÓSTICO AUTOMÁTICO DO TICKET</h6>
+                        <div class="diagnostico-box mb-4" id="diagnosticoDisplay">
+                            [ Sistema pronto aguardando entradas ]
+                        </div>
+                        <textarea class="d-none" name="diagnostico" id="diagnosticoInput"></textarea>
                     </div>
 
                     <div class="text-end mt-4">
@@ -513,19 +524,35 @@ document.addEventListener("DOMContentLoaded", function() {
     const tipoEquipamento = document.querySelector('select[name="tipo_equipamento"]');
     const hardwareCards = document.querySelectorAll('.hardware-card');
     const labelEquipamento = document.getElementById('labelEquipamento');
-    const cardEquipamento = document.getElementById('cardEquipamento');
+    const rowImpressora = document.getElementById('rowImpressora');
 
     if (tipoEquipamento) {
         tipoEquipamento.addEventListener('change', function() {
             const isDesktop = this.value === 'Desktop';
+            const isImpressora = this.value === 'Impressora';
             const modeloContainer = document.getElementById('modeloContainer');
-            
-            // Toggle Hardware cards
+
+            // Toggle Hardware cards (só Desktop)
             hardwareCards.forEach(card => {
                 card.style.display = isDesktop ? 'block' : 'none';
             });
 
-            // Update label and input for Modelo
+            // Toggle campo Impressora
+            if (rowImpressora) rowImpressora.style.display = isImpressora ? 'flex' : 'none';
+
+            // Estado Geral: ocultar e forçar Ruim se não for Desktop
+            const colEstado = document.getElementById('colEstadoGeral');
+            const selEstado = document.getElementById('selectEstadoGeral');
+            if (colEstado && selEstado) {
+                if (isDesktop) {
+                    colEstado.style.display = '';
+                } else {
+                    selEstado.value = 'Ruim';
+                    colEstado.style.display = 'none';
+                }
+            }
+
+            // Update label
             if (labelEquipamento) {
                 labelEquipamento.innerText = isDesktop ? 'Gabinete' : this.value;
             }

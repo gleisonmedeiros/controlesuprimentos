@@ -29,6 +29,7 @@ class Unidade(models.Model):
 class Suprimento(models.Model):
     nome = models.CharField(max_length=100)
     quantidade = models.PositiveIntegerField()
+    quantidade_minima = models.PositiveIntegerField(default=0, verbose_name="Qtd. Mínima")
 
     def __str__(self):
         return f"{self.nome} ({self.quantidade})"
@@ -174,11 +175,17 @@ class TicketManutencao(models.Model):
 
     TIPO_EQUIPAMENTO_CHOICES = [
         ('Desktop', 'Desktop'),
-        ('Monitor', 'Monitor'),
-        ('Teclado', 'Teclado'),
-        ('Mouse', 'Mouse'),
         ('Estabilizador', 'Estabilizador'),
+        ('Impressora', 'Impressora'),
+        ('Monitor', 'Monitor'),
+        ('Mouse', 'Mouse'),
         ('Nobreak', 'Nobreak'),
+        ('Teclado', 'Teclado'),
+    ]
+
+    TIPO_IMPRESSORA_CHOICES = [
+        ('Comum', 'Comum'),
+        ('Multifuncional', 'Multifuncional'),
     ]
 
     ticket_id = models.CharField(max_length=20, unique=True, verbose_name="Ticket ID")
@@ -219,6 +226,9 @@ class TicketManutencao(models.Model):
     # COOLER
     cooler_estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Bom')
     
+    # IMPRESSORA
+    impressora_tipo = models.CharField(max_length=20, choices=TIPO_IMPRESSORA_CHOICES, blank=True, null=True, verbose_name="Tipo de Impressora")
+
     # DIAGNÓSTICO E OBS
     diagnostico = models.TextField(blank=True, null=True, verbose_name="Diagnóstico Automático")
     observacoes = models.TextField(blank=True, null=True, verbose_name="Observações do Técnico")
@@ -226,6 +236,7 @@ class TicketManutencao(models.Model):
     STATUS_CHOICES = [
         ('ABERTO', 'Aberto'),
         ('AGUARDANDO PEÇAS', 'Aguardando Peças'),
+        ('ENV. ASS. TECNICA', 'Enviado Ass. Técnica'),
         ('FINALIZADO', 'Finalizado'),
         ('CONDENADO', 'Condenado'),
     ]

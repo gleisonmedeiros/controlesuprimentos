@@ -34,16 +34,16 @@ def relatorio_estoque(request):
     suprimentos = Suprimento.objects.all().order_by('nome')
     if request.method == 'POST' and request.POST.get('editar_estoque'):
         for suprimento in suprimentos:
-            field_name = f"quantidade_{suprimento.id}"
-            nova_quantidade = request.POST.get(field_name)
-            if nova_quantidade is not None:
-                try:
-                    nova_quantidade = int(nova_quantidade)
-                    if nova_quantidade >= 0:
-                        suprimento.quantidade = nova_quantidade
-                        suprimento.save()
-                except ValueError:
-                    pass
+            nova_qtd = request.POST.get(f"quantidade_{suprimento.id}")
+            nova_min = request.POST.get(f"minima_{suprimento.id}")
+            try:
+                if nova_qtd is not None:
+                    suprimento.quantidade = max(0, int(nova_qtd))
+                if nova_min is not None:
+                    suprimento.quantidade_minima = max(0, int(nova_min))
+                suprimento.save()
+            except ValueError:
+                pass
         return redirect('relatorio_estoque')
     context = {'suprimentos': suprimentos}
     return render(request, 'relatorio_estoque.html', context)
@@ -1682,7 +1682,9 @@ def relatorio_pecas_defeituosas(request):
         tipo_display = 'Gabinete' if is_desktop else t.tipo_equipamento
 
         if t.gabinete_estado == 'Ruim':
-            if is_desktop:
+            if t.tipo_equipamento == 'Impressora' and t.impressora_tipo:
+                key = f"Impressora {t.impressora_tipo} ({t.equipamento_modelo})"
+            elif is_desktop:
                 key = f"{tipo_display} ({t.equipamento_modelo})"
             else:
                 key = f"{tipo_display} ({t.equipamento_modelo})"
@@ -1731,12 +1733,16 @@ def relatorio_pecas_defeituosas(request):
     lista_necessarias = sorted([{'nome': k, 'total': v['total'], 'tickets': v['tickets']} for k, v in pecas_necessarias.items()], key=lambda x: x['nome'])
 
     condenados = TicketManutencao.objects.filter(status='CONDENADO').order_by('-data_abertura')
+    impressoras = TicketManutencao.objects.filter(
+        tipo_equipamento='Impressora'
+    ).exclude(status='FINALIZADO').order_by('-data_abertura')
 
     context = {
         'lista_ruins': lista_ruins,
         'lista_necessarias': lista_necessarias,
         'total_tickets': tickets.count(),
         'condenados': condenados,
+        'impressoras': impressoras,
     }
     return render(request, 'relatorio_pecas.html', context)
 

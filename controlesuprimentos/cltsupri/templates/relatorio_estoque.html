@@ -8,6 +8,16 @@
     </h4>
 </div>
 
+{% with alertas=suprimentos|dictsort:"nome" %}
+{% for s in suprimentos %}{% if s.quantidade_minima > 0 and s.quantidade <= s.quantidade_minima %}
+<div class="alert alert-warning alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-2" role="alert" style="font-size:0.88rem;">
+    <i class="bi bi-exclamation-triangle-fill me-2 text-warning fs-5"></i>
+    <span><strong>{{ s.nome }}</strong> está com estoque baixo — <strong>{{ s.quantidade }}</strong> unidade(s) (mínimo: {{ s.quantidade_minima }})</span>
+    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}{% endfor %}
+{% endwith %}
+
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
         <h5 class="fw-bold text-secondary mb-0"><i class="bi bi-box-seam me-2"></i>Total em Estoque</h5>
@@ -21,16 +31,29 @@
                     <thead class="table-light">
                         <tr>
                             <th class="ps-3">Modelo de Toner</th>
-                            <th class="text-center" style="width: 200px;">Quantidade em Estoque</th>
-                            <th class="text-center" style="width: 120px;">Editar</th>
+                            <th class="text-center" style="width:160px;">Qtd. em Estoque</th>
+                            <th class="text-center" style="width:160px;">Qtd. Mínima</th>
+                            <th class="text-center" style="width:100px;">Salvar</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for s in suprimentos %}
-                        <tr>
-                            <td class="ps-3 fw-bold text-primary">{{ s.nome }}</td>
-                            <td class="text-center fw-medium">
-                                <input type="number" min="0" name="quantidade_{{ s.id }}" value="{{ s.quantidade }}" class="form-control text-center d-inline-block" style="max-width: 120px;">
+                        <tr {% if s.quantidade_minima > 0 and s.quantidade <= s.quantidade_minima %}class="table-warning"{% endif %}>
+                            <td class="ps-3 fw-bold text-primary">
+                                {{ s.nome }}
+                                {% if s.quantidade_minima > 0 and s.quantidade <= s.quantidade_minima %}
+                                <i class="bi bi-exclamation-triangle-fill text-warning ms-1" title="Estoque abaixo do mínimo"></i>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <input type="number" min="0" name="quantidade_{{ s.id }}" value="{{ s.quantidade }}"
+                                       class="form-control text-center d-inline-block {% if s.quantidade_minima > 0 and s.quantidade <= s.quantidade_minima %}border-warning{% endif %}"
+                                       style="max-width:110px;">
+                            </td>
+                            <td class="text-center">
+                                <input type="number" min="0" name="minima_{{ s.id }}" value="{{ s.quantidade_minima }}"
+                                       class="form-control text-center d-inline-block"
+                                       style="max-width:110px;" placeholder="0">
                             </td>
                             <td class="text-center">
                                 <button type="submit" class="btn btn-outline-primary btn-sm px-3">Salvar</button>
