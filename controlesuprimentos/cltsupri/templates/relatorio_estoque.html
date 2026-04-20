@@ -8,15 +8,6 @@
     </h4>
 </div>
 
-{% with alertas=suprimentos|dictsort:"nome" %}
-{% for s in suprimentos %}{% if s.quantidade_minima > 0 and s.quantidade <= s.quantidade_minima %}
-<div class="alert alert-warning alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-2" role="alert" style="font-size:0.88rem;">
-    <i class="bi bi-exclamation-triangle-fill me-2 text-warning fs-5"></i>
-    <span><strong>{{ s.nome }}</strong> está com estoque baixo — <strong>{{ s.quantidade }}</strong> unidade(s) (mínimo: {{ s.quantidade_minima }})</span>
-    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-{% endif %}{% endfor %}
-{% endwith %}
 
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
