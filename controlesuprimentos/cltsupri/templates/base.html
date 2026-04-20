@@ -74,18 +74,6 @@
 
 
     {% block menu %}{% endblock %}
-    {% if toners_baixo %}
-    <div class="container-fluid px-3" style="max-width:900px;">
-        <div class="alert alert-danger py-1 px-2 my-2 small d-flex align-items-center border-danger fade-in" style="font-weight: 500;">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            <div>
-                {% for toner in toners_baixo %}
-                    O insumo <span class="text-danger">{{ toner.nome }}</span> está acabando ({{ toner.quantidade }} unidades){% if not forloop.last %}; {% endif %}
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
     <div class="main-wrapper">
         <!-- Conteúdo das páginas -->
         <div class="container flex-grow-1 fade-in py-4">
