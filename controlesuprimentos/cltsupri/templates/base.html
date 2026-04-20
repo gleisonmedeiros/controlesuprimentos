@@ -74,6 +74,17 @@
 
 
     {% block menu %}{% endblock %}
+    {% if toners_baixo %}
+    <div class="container-fluid px-3 mt-2" style="max-width:960px;">
+        {% for s in toners_baixo %}
+        <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-2" role="alert" style="font-size:0.88rem;">
+            <i class="bi bi-exclamation-triangle-fill me-2 text-warning fs-5"></i>
+            <span><strong>{{ s.nome }}</strong> está com estoque baixo — <strong>{{ s.quantidade }}</strong> unidade(s) (mínimo: {{ s.quantidade_minima }})</span>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     <div class="main-wrapper">
         <!-- Conteúdo das páginas -->
         <div class="container flex-grow-1 fade-in py-4">
