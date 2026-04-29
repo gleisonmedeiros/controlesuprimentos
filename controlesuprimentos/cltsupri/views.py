@@ -1764,4 +1764,240 @@ def alterar_status_ticket(request, ticket_id):
         ticket.save()
         return JsonResponse({'success': True})
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+@login_required(login_url='login')
+def exportar_relatorio_tickets_excel(request):
+    from .models import TicketManutencao
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl import Workbook
+    from django.http import HttpResponse
+
+    # 1. Obter tickets ativos (não finalizados)
+    tickets_base = TicketManutencao.objects.exclude(status='FINALIZADO').order_by('-data_abertura', '-id')
+
+    # 2. Lógica de Peças (Apenas para tickets que NÃO estão CONDENADOS nem FINALIZADOS)
+    pecas_necessarias_dict = defaultdict(lambda: {'total': 0, 'tickets': []})
+
+    def add_peca(key, ticket_id):
+        pecas_necessarias_dict[key]['total'] += 1
+        pecas_necessarias_dict[key]['tickets'].append(ticket_id)
+
+    # Filtrar apenas tickets que realmente precisam de peças (exclui CONDENADO)
+    for t in tickets_base.exclude(status='CONDENADO'):
+        is_desktop = t.tipo_equipamento == 'Desktop'
+        tipo_display = 'Gabinete' if is_desktop else t.tipo_equipamento
+
+        # Gabinete / Carcaça
+        if t.gabinete_estado == 'Ruim':
+            key = f"{tipo_display} ({t.equipamento_modelo})"
+            add_peca(key, t.ticket_id)
+
+        if is_desktop:
+            # Processador
+            if t.processador_estado == 'Ruim':
+                key = f"Processador {t.processador_nome or ''} ({t.processador_socket or ''})"
+                add_peca(key, t.ticket_id)
+
+            # Placa-mãe
+            if t.placa_mae_estado == 'Ruim':
+                key = f"Placa-Mãe ({t.processador_socket or ''} / {t.ram_tipo or ''})"
+                add_peca(key, t.ticket_id)
+
+            # Armazenamento
+            if t.armazenamento_estado == 'Ruim':
+                key = f"{t.armazenamento_tipo or ''} {t.armazenamento_capacidade or ''}"
+                add_peca(key, t.ticket_id)
+            elif t.armazenamento_estado == 'Não contém':
+                key = "Unidade de Armazenamento (Faltando)"
+                add_peca(key, t.ticket_id)
+
+            # RAM
+            if t.ram_ausente:
+                key = f"Memória RAM {t.ram_tipo or ''} (Faltando)"
+                add_peca(key, t.ticket_id)
+            else:
+                for pente in t.ram_pentes_detalhes:
+                    if pente.get('estado') == 'Ruim':
+                        capacidade = str(pente.get('capacidade', ''))
+                        if capacidade.isdigit():
+                            capacidade += "GB"
+                        key = f"Memória RAM {t.ram_tipo or ''} {capacidade}"
+                        add_peca(key.strip(), t.ticket_id)
+
+            # Fonte
+            if t.fonte_estado == 'Ruim':
+                key = f"Fonte {t.fonte_tipo or ''}"
+                add_peca(key, t.ticket_id)
+            elif t.fonte_estado == 'Não contém':
+                key = "Fonte (Faltando)"
+                add_peca(key, t.ticket_id)
+
+            # Cooler
+            if t.cooler_estado == 'Ruim':
+                key = f"Cooler ({t.processador_socket or ''})"
+                add_peca(key, t.ticket_id)
+
+    lista_pecas = sorted([
+        {'nome': k, 'total': v['total'], 'tickets': ' | '.join(v['tickets'])} 
+        for k, v in pecas_necessarias_dict.items()
+    ], key=lambda x: x['nome'])
+
+    # 3. Criar Excel
+    wb = Workbook()
+    
+    # Estilos
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill_blue = PatternFill(start_color="0D6EFD", end_color="0D6EFD", fill_type="solid")
+    header_fill_red = PatternFill(start_color="DC3545", end_color="DC3545", fill_type="solid")
+    center_align = Alignment(horizontal='center', vertical='center')
+    top_align_wrap = Alignment(wrap_text=True, vertical='top')
+    border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+    # ABA 1: Peças Necessárias
+    ws1 = wb.active
+    ws1.title = "Peças Necessárias"
+    
+    headers_pecas = ["PEÇA", "ESPECIFICAÇÃO", "QUANTIDADE", "CHAMADOS"]
+    for col_num, header in enumerate(headers_pecas, 1):
+        cell = ws1.cell(row=1, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill_blue
+        cell.alignment = center_align
+        cell.border = border
+
+    for row_num, p in enumerate(lista_pecas, 2):
+        nome = p['nome']
+        espec = ""
+        if '(' in nome:
+            partes = nome.split('(', 1)
+            nome = partes[0].strip()
+            espec = partes[1].replace(')', '').strip()
+        
+        data_row = [nome, espec, p['total'], p['tickets']]
+        for col_num, value in enumerate(data_row, 1):
+            cell = ws1.cell(row=row_num, column=col_num, value=value)
+            cell.border = border
+
+    # ABA 2: Todos os Tickets
+    ws2 = wb.create_sheet(title="Todos os Tickets")
+    headers_tickets = ["Data", "ID Ticket", "Técnico", "Status", "Marca / Modelo", "Peças Defeituosas/Faltantes", "Observações"]
+    for col_num, header in enumerate(headers_tickets, 1):
+        cell = ws2.cell(row=1, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill_blue
+        cell.alignment = center_align
+        cell.border = border
+
+    for row_num, t in enumerate(tickets_base, 2):
+        status_display = t.get_status_display()
+        if t.status == 'ABERTO': status_display = "🟢 " + status_display
+        if t.status == 'AGUARDANDO PEÇAS': status_display = "🟡 " + status_display
+        if t.status == 'CONDENADO': status_display = "❌ " + status_display
+        if t.status == 'ENV. ASS. TECNICA': status_display = "🟣 " + status_display
+
+        # Coletar peças ruins/faltantes para este ticket específico
+        pecas_info = []
+        if t.gabinete_estado == 'Ruim': pecas_info.append("Gabinete/Carcaça ruim")
+        if t.processador_estado == 'Ruim': pecas_info.append(f"Processador {t.processador_nome or ''} ruim")
+        if t.placa_mae_estado == 'Ruim': pecas_info.append(f"Placa-Mãe ({t.processador_socket or ''} / {t.ram_tipo or ''}) ruim")
+        if t.armazenamento_estado == 'Ruim': pecas_info.append(f"{t.armazenamento_tipo or ''} {t.armazenamento_capacidade or ''} ruim")
+        elif t.armazenamento_estado == 'Não contém': pecas_info.append(f"{t.armazenamento_tipo or 'Armazenamento'} faltando")
+        
+        if t.ram_ausente:
+            pecas_info.append(f"Memória RAM {t.ram_tipo or ''} faltando")
+        else:
+            pentes_ruins = [p for p in t.ram_pentes_detalhes if p.get('estado') == 'Ruim']
+            if pentes_ruins:
+                desc_pentes = ", ".join([str(p.get('capacidade', '')) + "GB" for p in pentes_ruins])
+                pecas_info.append(f"Memória RAM {t.ram_tipo or ''} ({desc_pentes}) ruim ({len(pentes_ruins)} pente(s))")
+
+        if t.fonte_estado == 'Ruim': pecas_info.append(f"Fonte {t.fonte_tipo or ''} ruim")
+        elif t.fonte_estado == 'Não contém': pecas_info.append("Fonte faltando")
+        if t.cooler_estado == 'Ruim': pecas_info.append("Cooler ruim")
+
+        pecas_texto = "\n".join(pecas_info) if pecas_info else ""
+
+        data_row = [
+            t.data_abertura.strftime("%d/%m/%Y"),
+            t.ticket_id,
+            t.tecnico,
+            status_display,
+            f"{t.equipamento_marca} / {t.equipamento_modelo}",
+            pecas_texto,
+            t.observacoes or ""
+        ]
+        for col_num, value in enumerate(data_row, 1):
+            cell = ws2.cell(row=row_num, column=col_num, value=value)
+            cell.border = border
+            if col_num in [6, 7]: cell.alignment = top_align_wrap
+
+    # ABA 3: Equipamentos Condenados
+    ws3 = wb.create_sheet(title="Equipamentos Condenados")
+    headers_condenados = ["Data", "ID Ticket", "Técnico", "Equipamento", "Peças Defeituosas/Faltantes", "Observação"]
+    for col_num, header in enumerate(headers_condenados, 1):
+        cell = ws3.cell(row=1, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill_red
+        cell.alignment = center_align
+        cell.border = border
+
+    condenados = [t for t in tickets_base if t.status == 'CONDENADO']
+    for row_num, c in enumerate(condenados, 2):
+        pecas_info = []
+        if c.gabinete_estado == 'Ruim': pecas_info.append("Gabinete/Carcaça ruim")
+        if c.processador_estado == 'Ruim': pecas_info.append(f"Processador {c.processador_nome or ''} ruim")
+        if c.placa_mae_estado == 'Ruim': pecas_info.append(f"Placa-Mãe ({c.processador_socket or ''} / {c.ram_tipo or ''}) ruim")
+        if c.armazenamento_estado == 'Ruim': pecas_info.append(f"{c.armazenamento_tipo or ''} {c.armazenamento_capacidade or ''} ruim")
+        elif c.armazenamento_estado == 'Não contém': pecas_info.append(f"{c.armazenamento_tipo or 'Armazenamento'} faltando")
+        
+        if c.ram_ausente:
+            pecas_info.append(f"Memória RAM {c.ram_tipo or ''} faltando")
+        else:
+            pentes_ruins = [p for p in c.ram_pentes_detalhes if p.get('estado') == 'Ruim']
+            if pentes_ruins:
+                desc_pentes = ", ".join([str(p.get('capacidade', '')) + "GB" for p in pentes_ruins])
+                pecas_info.append(f"Memória RAM {c.ram_tipo or ''} ({desc_pentes}) ruim ({len(pentes_ruins)} pente(s))")
+
+        if c.fonte_estado == 'Ruim': pecas_info.append(f"Fonte {c.fonte_tipo or ''} ruim")
+        elif c.fonte_estado == 'Não contém': pecas_info.append("Fonte faltando")
+        if c.cooler_estado == 'Ruim': pecas_info.append("Cooler ruim")
+
+        pecas_texto = "\n".join(pecas_info) if pecas_info else "Nenhuma peça identificada"
+
+        data_row = [
+            c.data_abertura.strftime("%d/%m/%Y"),
+            c.ticket_id,
+            c.tecnico,
+            f"{c.equipamento_marca} / {c.equipamento_modelo}",
+            pecas_texto,
+            c.observacoes or ""
+        ]
+        for col_num, value in enumerate(data_row, 1):
+            cell = ws3.cell(row=row_num, column=col_num, value=value)
+            cell.border = border
+            if col_num in [5, 6]: cell.alignment = top_align_wrap
+
+    # Ajustar largura das colunas em todas as abas
+    from openpyxl.utils import get_column_letter
+    for sheet in wb.worksheets:
+        for col in sheet.columns:
+            max_length = 0
+            column_letter = get_column_letter(col[0].column)
+            for cell in col:
+                try:
+                    if cell.value:
+                        lines = str(cell.value).split('\n')
+                        max_line_length = max(len(line) for line in lines)
+                        if max_line_length > max_length:
+                            max_length = max_line_length
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)  # Limitar largura máxima
+            sheet.column_dimensions[column_letter].width = adjusted_width
+
+    # Preparar resposta
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=Relatorio_Tickets_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx'
+    wb.save(response)
+    return response

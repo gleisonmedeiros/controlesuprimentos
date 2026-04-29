@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Projeto, Unidade, Suprimento, EntregaSuprimento, Equipamento, Maquina,ModeloFornecedor
+from .models import Projeto, Unidade, Suprimento, EntregaSuprimento, Equipamento, Maquina, ModeloFornecedor, TicketManutencao
 
 @admin.register(Projeto)
 class ProjetoAdmin(admin.ModelAdmin):
@@ -48,3 +48,11 @@ class ModeloFornecedorAdmin(admin.ModelAdmin):
     search_fields = ('modelo',)
     list_filter = ('fornecedor',)
     ordering = ('modelo',)
+
+@admin.register(TicketManutencao)
+class TicketManutencaoAdmin(admin.ModelAdmin):
+    list_display = ('ticket_id', 'tecnico', 'data_abertura', 'status', 'tipo_equipamento', 'equipamento_marca')
+    list_filter = ('status', 'tipo_equipamento', 'tecnico', 'data_abertura')
+    search_fields = ('ticket_id', 'patrimonio', 'tecnico', 'equipamento_modelo', 'observacoes')
+    date_hierarchy = 'data_abertura'
+    ordering = ('-data_abertura',)

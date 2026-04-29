@@ -53,4 +53,5 @@ urlpatterns = [
     path('resumo-defeitos/', views.relatorio_pecas_defeituosas, name='relatorio_pecas_defeituosas'),
     path('ticket/<int:ticket_id>/status/', views.alterar_status_ticket, name='alterar_status_ticket'),
     path('ticket/<int:pk>/editar/', views.editar_ticket, name='editar_ticket'),
+    path('relatorio-tickets/exportar/', views.exportar_relatorio_tickets_excel, name='exportar_relatorio_tickets_excel'),
 ]

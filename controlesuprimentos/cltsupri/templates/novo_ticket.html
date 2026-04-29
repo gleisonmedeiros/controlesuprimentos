@@ -106,7 +106,7 @@
                                 <label class="form-label">Estado Geral</label>
                                 <select name="gabinete_estado" class="form-select estado-select" data-component="Gabinete" id="selectEstadoGeral">
                                     {% for val, text in form.fields.gabinete_estado.choices %}
-                                        <option value="{{ val }}" {% if val == form.gabinete_estado.value %}selected{% endif %}>{{ text }}</option>
+                                        <option value="{{ val }}" {% if val == form.instance.gabinete_estado %}selected{% endif %}>{{ text }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -117,7 +117,7 @@
                                 <label class="form-label">Tipo de Impressora</label>
                                 <select name="impressora_tipo" class="form-select">
                                     {% for val, text in form.fields.impressora_tipo.choices %}
-                                        <option value="{{ val }}" {% if val == form.impressora_tipo.value %}selected{% endif %}>{{ text }}</option>
+                                        <option value="{{ val }}" {% if val == form.instance.impressora_tipo %}selected{% endif %}>{{ text }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -139,7 +139,7 @@
                                         <label class="form-label small">Estado</label>
                                         <select name="processador_estado" class="form-select estado-select" data-component="Processador">
                                             {% for val, text in form.fields.processador_estado.choices %}
-                                                <option value="{{ val }}">{{ text }}</option>
+                                                <option value="{{ val }}" {% if val == form.instance.processador_estado %}selected{% endif %}>{{ text }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -161,7 +161,7 @@
                                         <label class="form-label small">Estado</label>
                                         <select name="armazenamento_estado" class="form-select estado-select" data-component="Armazenamento">
                                             {% for val, text in form.fields.armazenamento_estado.choices %}
-                                                <option value="{{ val }}">{{ text }}</option>
+                                                <option value="{{ val }}" {% if val == form.instance.armazenamento_estado %}selected{% endif %}>{{ text }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -217,7 +217,7 @@
                                         <label class="form-label text-muted small">Estado</label>
                                         <select name="placa_mae_estado" class="form-select estado-select" data-component="Placa-Mãe">
                                             {% for val, text in form.fields.placa_mae_estado.choices %}
-                                                <option value="{{ val }}">{{ text }}</option>
+                                                <option value="{{ val }}" {% if val == form.instance.placa_mae_estado %}selected{% endif %}>{{ text }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -236,7 +236,7 @@
                                         <label class="form-label text-muted small">Estado</label>
                                         <select name="fonte_estado" class="form-select estado-select" data-component="Fonte">
                                             {% for val, text in form.fields.fonte_estado.choices %}
-                                                <option value="{{ val }}">{{ text }}</option>
+                                                <option value="{{ val }}" {% if val == form.instance.fonte_estado %}selected{% endif %}>{{ text }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -249,7 +249,7 @@
                                 <label class="form-label text-muted small">Estado</label>
                                 <select name="cooler_estado" class="form-select estado-select" data-component="Cooler">
                                     {% for val, text in form.fields.cooler_estado.choices %}
-                                        <option value="{{ val }}">{{ text }}</option>
+                                        <option value="{{ val }}" {% if val == form.instance.cooler_estado %}selected{% endif %}>{{ text }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
