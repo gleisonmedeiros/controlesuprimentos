@@ -2,7 +2,7 @@ services:
   django:
     build: .
     container_name: django_suprimentos
-    command: python manage.py runserver 0.0.0.0:8000
+    command: gunicorn controlesuprimentos.wsgi:application --bind 0.0.0.0:8000 --workers 3
     volumes:
       - .:/app
     ports:
