@@ -3,6 +3,6 @@ cd C:\controlesuprimentos\controlesuprimentos
 pip install -r requirements.txt
 python manage.py makemigrations
 python manage.py migrate
-gunicorn controlesuprimentos.wsgi:application --bind 0.0.0.0:8000 --workers 3
+waitress-serve --listen=0.0.0.0:8000 controlesuprimentos.wsgi:application
 
 
