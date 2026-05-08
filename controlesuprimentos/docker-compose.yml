@@ -2,7 +2,11 @@ services:
   django:
     build: .
     container_name: django_suprimentos
-    command: gunicorn controlesuprimentos.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    command: gunicorn controlesuprimentos.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --access-logfile - --error-logfile -
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
     volumes:
       - .:/app
     ports:
